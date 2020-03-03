@@ -23,7 +23,7 @@ mortality_m <- mortality %>% # Select male sex
 # - age -- 19 (0, 1-4, 5-10, ..., 80-84, 85+)
 # - LAD -- 33 or 1
 # - MSOA -- 983 or 25
-# - LSOA -- 4835 or 130
+# - LSOA -- 4835 or 113
 # - YEAR -- 14 (2004-17)
 
 # ----- BUILD THE MODEL -----
