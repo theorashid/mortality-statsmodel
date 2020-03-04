@@ -89,7 +89,7 @@ mcmc.out <- nimbleMCMC(model = Cmodel,
 
 # # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # # 1. MCMC Configuration -- can be customised with different samplers
-# mcmcConf <- configureMCMC(model = model) # input the R model
+# mcmcConf <- configureMCMC(model = model, print = TRUE) # input the R model
 # 
 # # 2. Build and compile the MCMC
 # Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
