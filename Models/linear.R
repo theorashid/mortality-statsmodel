@@ -81,31 +81,27 @@ model <- nimbleModel(code = code, constants = constants, data = data, inits = in
 # ----- COMPILE THE MODEL IN C-CODE -----
 Cmodel <- compileNimble(model)
 
-# ----- MCMC INTEGRATION -----
-# ONE LINE MCMC
-mcmc.out <- nimbleMCMC(model = Cmodel,
-                       thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
-                       progressBar = TRUE, samples = TRUE, summary = TRUE)
+# # ----- MCMC INTEGRATION -----
+# # ONE LINE MCMC
+# mcmc.out <- nimbleMCMC(model = Cmodel,
+#                        thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
+#                        progressBar = TRUE, samples = TRUE, summary = TRUE)
 
 # # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # # 1. MCMC Configuration -- can be customised with different samplers
 # mcmcConf <- configureMCMC(model = model, print = TRUE) # input the R model
-# 
+
 # # 2. Build and compile the MCMC
 # Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
 # Cmcmc <- compileNimble(Rmcmc)
-# 
+
 # # 3. Run MCMC
 # mcmc.out <- runMCMC(Cmcmc,
 #                     thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
 #                     progressBar = TRUE, samples = TRUE, summary = TRUE) # similar to nimbleMCMC
 
-# POSSIBLE TO RUN MCMC CHAINS IN PARALLEL BUT REQUIRES
-# CREATING A MODEL AGAIN
+# # POSSIBLE TO RUN MCMC CHAINS IN PARALLEL BUT REQUIRES
+# # CREATING A MODEL AGAIN
 
-# # ----- EXTRACT SAMPLES -----
-# mvSamples <- mcmc.out$samples
-# samplesMatrix <- as.matrix(mcmc.out$samples)
-
-# mvSamples <- mcmc.out$summary
-# # save the mcmc.out object
+# ----- SAVE OUTPUT SAMPLES AND SUMMARY -----
+# saveRDS(mcmc.out, file = "mcmc_out.rds")
