@@ -71,21 +71,21 @@ data <- list(y = mortality_m$deaths,
              age = mortality_m$age_group.id,
              LSOA = mortality_m$LSOA.id, 
              yr = mortality_m$YEAR.id)
-inits <- list(alpha0 = 0, beta0 = 0)
 
 # ----- CREATE THE MODEL -----
-model <- nimbleModel(code = code, constants = constants, data = data, inits = inits) # model in R
+model <- nimbleModel(code = code, constants = constants, data = data) # model in R
 # model$getNodeNames() # look at nodes of model's DAG
 # model$plotGraph() # plot the DAG
 
 # ----- COMPILE THE MODEL IN C-CODE -----
 Cmodel <- compileNimble(model)
 
-# # ----- MCMC INTEGRATION -----
-# # ONE LINE MCMC
-# mcmc.out <- nimbleMCMC(model = Cmodel,
-#                        thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
-#                        progressBar = TRUE, samples = TRUE, summary = TRUE)
+# ----- MCMC INTEGRATION -----
+inits <- function() list(alpha0 = rnorm(1,0,1), beta0 = rnorm(1,0,1))
+# ONE LINE MCMC
+mcmc.out <- nimbleMCMC(model = Cmodel, inits = inits,
+                       thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
+                       progressBar = TRUE, samples = TRUE, summary = TRUE)
 
 # # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # # 1. MCMC Configuration -- can be customised with different samplers
@@ -96,12 +96,12 @@ Cmodel <- compileNimble(model)
 # Cmcmc <- compileNimble(Rmcmc)
 
 # # 3. Run MCMC
-# mcmc.out <- runMCMC(Cmcmc,
+# mcmc.out <- runMCMC(Cmcmc, inits = inits,
 #                     thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
 #                     progressBar = TRUE, samples = TRUE, summary = TRUE) # similar to nimbleMCMC
 
-# # POSSIBLE TO RUN MCMC CHAINS IN PARALLEL BUT REQUIRES
-# # CREATING A MODEL AGAIN
+# POSSIBLE TO RUN MCMC CHAINS IN PARALLEL BUT REQUIRES
+# CREATING A MODEL AGAIN
 
 # ----- SAVE OUTPUT SAMPLES AND SUMMARY -----
-# saveRDS(mcmc.out, file = "mcmc_out.rds")
+saveRDS(mcmc.out, file = "mcmc_out.rds")
