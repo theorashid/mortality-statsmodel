@@ -1,8 +1,6 @@
-# Tests
-mxE1 <- exp(-5.5 + c(0,-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
-# PeriodLifeTable(mx=mxE1,age=c(c(0,1), seq(5, 85, 5)),ax=rep(NA,19),sex = 1, full.table=TRUE)
-mxE <- exp(-5.5 + c(-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
-# PeriodLifeTable(mx=mxE,age=seq(0, 85, 5),ax=rep(NA,18),full.table=TRUE)
+# Test functionality
+# mxE <- exp(-5.5 + c(0,-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
+# PeriodLifeTable(mx=mxE,age=c(c(0,1), seq(5, 85, 5)),ax=rep(NA,19),sex = 1, full.table=TRUE)
 
 .KTExtension <- function(lx70) {
 	# lx70: lx for 70 and older (should have 4 rows - one for each age group 
@@ -89,10 +87,9 @@ mxE <- exp(-5.5 + c(-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9
 		))
 	ax70
 }
-# Tests
-# mx = exp(-5.5 + c(0,-2.9))
+
 .young_age_extension <- function(mx, sex) {
-	# for age bins 0, 1-4 calculate the qx
+	# for age bins 0, 1-4 calculate the ax
 	# mx: mortality rates for ages 0 (mx[1]), 1-4 (mx[2])
 	# sex: 1 - male, 2 - female. different sexes have different ax (see p.48
 	# 	   Preston et al, Demography: measuring and modeling population processes, 
@@ -125,7 +122,6 @@ mxE <- exp(-5.5 + c(-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9
 
 	else stop("Sex must be 1 (male) or 2 (female)")
 	
-	# return(c(0.5, 2))
 	return(ax)
 }
 
@@ -165,9 +161,10 @@ PeriodLifeTable <- function(age, mx, ax, sex, check.conv = FALSE, full.table = F
 	lx[age == 0] <- 100000
 	for (k in seq(5, 85, 5)) 
 		lx[age == k] <- lx[age == k - 5] * px[age == k - 5]
-	dx <- lx * qx	
-	ax[age >= 70] <- .KTExtension(matrix(lx[age >= 70], nrow = 4))
+	dx <- lx * qx
+	# set ax values for young and old ages
 	ax[age <  5]  <- .young_age_extension(matrix(mx[age < 5], nrow = 2), sex = sex)
+	ax[age >= 70] <- .KTExtension(matrix(lx[age >= 70], nrow = 4))
 	
 	# ITERATE TO FIND THE BEST AX VALUES AND UPDATE qx, px, lx, dx accordingly
 	num.iter <- 4 # Number of iterations - see Preston et al. p.47
