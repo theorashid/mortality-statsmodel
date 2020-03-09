@@ -1,6 +1,5 @@
 # Tests
-mxE1 <- exp(-5.5 + c(0,-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
-# PeriodLifeTable(mx=mxE1,age=c(c(0,1), seq(5, 85, 5)),ax=rep(NA,19),sex = 1, full.table=TRUE)
+# mxE <- exp(-5.5 + c(0,-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
 mxE <- exp(-5.5 + c(-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
 # PeriodLifeTable(mx=mxE,age=seq(0, 85, 5),ax=rep(NA,18),full.table=TRUE)
 
@@ -89,47 +88,8 @@ mxE <- exp(-5.5 + c(-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9
 		))
 	ax70
 }
-# Tests
-# mx = exp(-5.5 + c(0,-2.9))
-.young_age_extension <- function(mx, sex) {
-	# for age bins 0, 1-4 calculate the qx
-	# mx: mortality rates for ages 0 (mx[1]), 1-4 (mx[2])
-	# sex: 1 - male, 2 - female. different sexes have different ax (see p.48
-	# 	   Preston et al, Demography: measuring and modeling population processes, 
-	#      2001). "The lower the mortality, the more heavily will infant deaths be
-	#	   concentrated at the earliest stages of infancy". The contingency table
-	#      is based on Coale and Demeny (1983), who fitted a line to international
-	#      and intertemporal data
-	ax = rep(NA,2) # initiate ax
-	if (sex == 1) {
-		if (mx[1] >= 0.107) {
-			ax[1] <- 0.330
-			ax[2] <- 1.352
-		}
-		else {
-			ax[1] <- 0.045 + 2.684 * mx[1]
-			ax[2] <- 1.651 - 2.816 * mx[1]
-		}
-	}
 
-	else if (sex == 2) {
-		if (mx[1] >= 0.107) {
-			ax[1] <- 0.350
-			ax[2] <- 1.361
-		}
-		else {
-			ax[1] <- 0.053 + 2.800 * mx[1]
-			ax[2] <- 1.522 - 1.518 * mx[1]
-		}
-	}
-
-	else stop("Sex must be 1 (male) or 2 (female)")
-	
-	# return(c(0.5, 2))
-	return(ax)
-}
-
-PeriodLifeTable <- function(age, mx, ax, sex, check.conv = FALSE, full.table = FALSE) {
+PeriodLifeTable <- function(age, mx, ax, check.conv = FALSE, full.table = FALSE) {
 	# Generate a period life table for the supplied inputs
 	# age: vector of age groups, 0, 5, 10, ..., 80, 85 (may be repeated
 	#     if more than 1 years of data are available)
@@ -141,18 +101,28 @@ PeriodLifeTable <- function(age, mx, ax, sex, check.conv = FALSE, full.table = F
 	#     Demographic Research (6) 2002]. For age groups 5-9 to 80-84 the ax 
 	#     are calibrated using an iterative procedure described on p.47 of 
 	#     Preston et al, Demography: measuring and modeling population processes, 
-	#     2001.
-	# sex: argument for the .young_age_extension() method
+	#     2001. 
 	# check.conv: If TRUE, it will test that the iterative procedure to estimate
 	#     ax (see above) has converged
 	if (length(age) != length(mx) | length(age) != length(ax)) 
 		stop("All input vectors must be of same length")
 
-	ax[is.na(ax)] <- 2.5 # halfway between 5 year age bins
+	ax[is.na(ax)] <- 2.5
 	
-	# CANNOT HAVE NA RATES
+	# Remove NA rates (this is useful when eg a given year has no mortality data; 
+	# the removed entries are re-inserted as NAs at the end of the function call)
+	na.idx <- NULL
+	if (any(is.na(mx))) {
+		na.idx <- which(is.na(mx))
+		stopifnot(age[na.idx] == seq(0, 85, 5))
+		age0 <- age
+		ax0 <- ax
+		mx0 <- mx
+		age <- age[-na.idx]
+		mx <- mx[-na.idx]
+		ax <- ax[-na.idx]
+	}
 
-	# INITIALISE qx, px, lx, dx WITH CORRECT DIMENSIONS
 	# Replace zero rates by a small number for numerical reasons
 	mx[mx == 0] <- 1e-10
 	# Probability of dying between age x and x+4
@@ -167,9 +137,6 @@ PeriodLifeTable <- function(age, mx, ax, sex, check.conv = FALSE, full.table = F
 		lx[age == k] <- lx[age == k - 5] * px[age == k - 5]
 	dx <- lx * qx	
 	ax[age >= 70] <- .KTExtension(matrix(lx[age >= 70], nrow = 4))
-	ax[age <  5]  <- .young_age_extension(matrix(mx[age < 5], nrow = 2), sex = sex)
-	
-	# ITERATE TO FIND THE BEST AX VALUES AND UPDATE qx, px, lx, dx accordingly
 	num.iter <- 4 # Number of iterations - see Preston et al. p.47
 	iter.dat <- vector("list", num.iter + 1)
 	iter.dat[[1]] <- list(ax = ax, qx = qx, lx = lx, dx = dx)
@@ -178,20 +145,15 @@ PeriodLifeTable <- function(age, mx, ax, sex, check.conv = FALSE, full.table = F
 		for (k in seq(5, 80, 5)) 
 			ax.new[age == k] <- (-5 / 24 * dx[age == k - 5] +
 				2.5 * dx[age == k] + 5 / 24 * dx[age == k + 5]) / dx[age == k]
-		ax.new[age <= 10 | age >= 70] <- ax[age <= 10 | age >= 70] # ignore the loop values above for ages <= 10 and >= 70
+		ax.new[age <= 10 | age >= 70] <- ax[age <= 10 | age >= 70] 
 		ax <- ax.new
 		qx <- 5 * mx / (1 + (5 - ax) * mx)
-		# Need to recode qx for 0, 1-4 which have bin width n=1 and n=4
-		qx[age == 0] <- 1 * mx[age == 0] / (1 + (1 - ax[age == 0]) * mx[age == 0]) # n = 1, 0
-		qx[age == 1] <- 4 * mx[age == 1] / (1 + (4 - ax[age == 1]) * mx[age == 1]) # n = 4, 1-4
 		qx[qx > 1] <- 0.99999
 		qx[age == 85] <- 1
 		px <- 1 - qx
 		lx <- rep(NA, length(px))
 		lx[age == 0] <- 100000
-		lx[age == 1] <- lx[age == 0] * px[age == 0]
-		lx[age == 5] <- lx[age == 1] * px[age == 1]
-		for (k in seq(10, 85, 5)) # the rest have bin width 5
+		for (k in seq(5, 85, 5)) 
 			lx[age == k] <- lx[age == k - 5] * px[age == k - 5]
 		dx <- lx * qx
 		# save result of current iteration
@@ -208,22 +170,41 @@ PeriodLifeTable <- function(age, mx, ax, sex, check.conv = FALSE, full.table = F
 	lx <- iter.result$lx
 	dx <- iter.result$dx
 	
-	# CALCULATE Lx and Tx, and hence ex
-	Lx <- rep(NA, length(age))
-	# Need to recode qx for 0, 1-4 which have bin width n=1 and n=4
-	Lx[age == 0] <- 1 * lx[age == 1] + ax[age == 0] * dx[age == 0]
-	Lx[age == 1] <- 4 * lx[age == 5] + ax[age == 1] * dx[age == 1]
-	for (k in seq(5, 80, 5))
+	Lx <- rep(NA, length(age)) 
+	for (k in seq(0, 80, 5))
 		Lx[age == k] <- 5 * lx[age == k + 5] + ax[age == k] * dx[age == k]
 	Lx[age == 85] <- lx[age == 85] / mx[age == 85]
 	Tx <- rep(NA, length(age)) 
 	Tx[age == 85] <- Lx[age == 85]
-	for (k in rev(seq(5, 80, 5)))
+	for (k in rev(seq(0, 80, 5)))
 		Tx[age == k] <- Tx[age == k + 5] + Lx[age == k]
-	Tx[age == 1] <- Tx[age == 5] + Lx[age == 1]
-	Tx[age == 0] <- Tx[age == 1] + Lx[age == 0]
 	ex <- Tx / lx
 	
+	# Re-insert missing values
+	if(!is.null(na.idx)) {
+		mx1 <- mx0
+		mx1[-na.idx] <- mx
+		mx <- mx1
+		ax1 <- ax0
+		ax1[-na.idx] <- ax
+		ax <- ax1	
+		age <- age0
+		qx1 <- rep(NA, length(mx0))
+		qx1[-na.idx] <- qx
+		qx <- qx1
+		ex1 <- rep(NA, length(mx0))
+		ex1[-na.idx] <- ex
+		ex <- ex1	
+		Tx1 <- rep(NA, length(mx0))
+		Tx1[-na.idx] <- Tx
+		Tx <- Tx1	
+		Lx1 <- rep(NA, length(mx0))
+		Lx1[-na.idx] <- Lx
+		Lx <- Lx1	
+		lx1 <- rep(NA, length(mx0))
+		lx1[-na.idx] <- lx
+		lx <- lx1	
+	}
 	if (full.table) return(data.frame(ax = ax, mx = mx, qx = qx, ex = ex, Tx = Tx, Lx = Lx, lx = lx, age = age))
 	data.frame(mx = mx, qx = qx, ex = ex)
 }
