@@ -41,7 +41,7 @@ code <- nimbleCode({
 
   # Put all parameters together into indexed lograte
 	for(a in 1:N_age_groups){
-	  for(j in 1:N_LSOA){
+    for(j in 1:N_LSOA){
 	    for(t in 1:N_year){
 	      # remember to centre your t to improve sampling performance
         # (cuts down correlation between parameters)
@@ -81,12 +81,14 @@ model <- nimbleModel(code = code, constants = constants, data = data) # model in
 Cmodel <- compileNimble(model)
 
 # ----- MCMC INTEGRATION -----
-inits <- function() list(alpha0 = rnorm(1,0,1), beta0 = rnorm(1,0,1))
+inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01))
 # ONE LINE MCMC
+# mcmc.out <- nimbleMCMC(model = Cmodel, inits = inits,
+#                        thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
+#                        progressBar = TRUE, samples = TRUE, summary = TRUE)
 mcmc.out <- nimbleMCMC(model = Cmodel, inits = inits,
-                       thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
+                       thin = 1, niter = 100, nchains = 2, nburnin = 10,
                        progressBar = TRUE, samples = TRUE, summary = TRUE)
-
 # # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # # 1. MCMC Configuration -- can be customised with different samplers
 # mcmcConf <- configureMCMC(model = model, print = TRUE) # input the R model
