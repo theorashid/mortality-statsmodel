@@ -95,31 +95,25 @@ model <- nimbleModel(code = code, constants = constants, data = data) # model in
 Cmodel <- compileNimble(model)
 
 # ----- MCMC INTEGRATION -----
-# Initial values for uninformative priors
+# Initial values for uninformative priors (top-level nodes)
 # Other values will be set from the model and subsequent
 # chains will begin using starting values where the 
 # previous chain ended
-inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01))
-# ONE LINE MCMC
-# mcmc.out <- nimbleMCMC(model = Cmodel, inits = inits,
-#                        thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
-#                        progressBar = TRUE, samples = TRUE, summary = TRUE)
+inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01),
+                         sigma_alpha1 = runif(1, 0.01, 0.8), sigma_beta1 = runif(1, 0.01, 0.8))
 
-# # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
-# # 1. MCMC Configuration -- can be customised with different samplers
-# mcmcConf <- configureMCMC(model = model, print = TRUE) # input the R model
+# CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
+# 1. MCMC Configuration -- can be customised with different samplers
+mcmcConf <- configureMCMC(model = model, print = TRUE) # input the R model
 
-# # 2. Build and compile the MCMC
-# Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
-# Cmcmc <- compileNimble(Rmcmc)
+# 2. Build and compile the MCMC
+Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
+Cmcmc <- compileNimble(Rmcmc)
 
-# # 3. Run MCMC
-# mcmc.out <- runMCMC(Cmcmc, inits = inits,
-#                     thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
-#                     progressBar = TRUE, samples = TRUE, summary = TRUE) # similar to nimbleMCMC
-
-# POSSIBLE TO RUN MCMC CHAINS IN PARALLEL BUT REQUIRES
-# CREATING A MODEL AGAIN
+# 3. Run MCMC
+mcmc.out <- runMCMC(Cmcmc, inits = inits,
+                    thin = 1, niter = 10000, nchains = 2, nburnin = 1000,
+                    progressBar = TRUE, samples = TRUE, summary = TRUE)
 
 # ----- SAVE OUTPUT SAMPLES AND SUMMARY -----
 saveRDS(mcmc.out, file = "mcmc_out.rds")
