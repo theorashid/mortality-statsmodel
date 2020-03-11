@@ -62,7 +62,7 @@ code <- nimbleCode({
 
     # LSOA terms
 	for(j in 1:N_LSOA){
-        id_LAD <- mortality_m[mortality_m$LSOA.id==j,]$LAD.id[1] # picks out LAD for jth LSOA
+        id_LAD <- filter(mortality_m, LSOA.id == j)$LAD.id[1] # picks out LAD for jth LSOA
         alpha1[j] ~ dnorm(alpha_LAD[id_LAD], tau_alpha1) # centred on LAD terms
 		beta1[j]  ~ dnorm(beta_LAD[id_LAD], tau_beta1)
 	}
