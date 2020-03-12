@@ -26,6 +26,12 @@ mortality_m <- mortality %>% # Select male sex
   filter(sex == 1) %>%
   select(-sex)
 
+grid.lookup <- mortality_m %>% # lookup correct MSOA or LAD for that LSOA
+  select(LSOA.id, MSOA.id, LAD.id) %>%
+  distinct() %>%
+  arrange(LSOA.id) # arrange ascending so matches loop order
+grid.lookup <- as.matrix(grid.lookup) # grid.lookup[j, 2] for MSOA, grid.lookup[j, 3] for LAD
+
 # Dimensions (Hammersmith and Fulham unit test second value):
 # - age -- 19 (0, 1-4, 5-10, ..., 80-84, 85+)
 # - LAD -- 33 or 1
@@ -62,9 +68,8 @@ code <- nimbleCode({
 
     # LSOA terms
 	for(j in 1:N_LSOA){
-        id_LAD <- filter(mortality_m, LSOA.id == j)$LAD.id[1] # picks out LAD for jth LSOA
-        alpha1[j] ~ dnorm(alpha_LAD[id_LAD], tau_alpha1) # centred on LAD terms
-		beta1[j]  ~ dnorm(beta_LAD[id_LAD], tau_beta1)
+        alpha1[j] ~ dnorm(alpha_LAD[grid.lookup[j, 3]], tau_alpha1) # centred on LAD terms
+		beta1[j]  ~ dnorm(beta_LAD[grid.lookup[j, 3]], tau_beta1)
 	}
 	sigma_alpha1 ~ dunif(0,2)
 	tau_alpha1 <- pow(sigma_alpha1,-2)
@@ -98,7 +103,8 @@ constants <- list(N = nrow(mortality_m),
                   N_year = n_distinct(mortality_m$YEAR),
                   N_LSOA = n_distinct(mortality_m$LSOA2011),
                   N_LAD = n_distinct(mortality_m$LAD2011),
-                  N_age_groups = n_distinct(mortality_m$age_group))
+                  N_age_groups = n_distinct(mortality_m$age_group),
+                  grid.lookup = grid.lookup)
 data <- list(y = mortality_m$deaths,
              n = mortality_m$population, 
              age = mortality_m$age_group.id,
