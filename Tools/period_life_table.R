@@ -1,6 +1,8 @@
-# Test functionality
-# mxE <- exp(-5.5 + c(0,-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
-# PeriodLifeTable(mx=mxE,age=c(c(0,1), seq(5, 85, 5)),ax=rep(NA,19),sex = 1, full.table=TRUE)
+# EXAMPLE USAGE
+# mxE11 <- exp(-5.5 + c(0,-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
+# mxE22 <- c(0.1, 0.2, 0.1, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.03, 0.04, 0.5, 0.6, 0.7, 0.9, 0.9)
+# mxE33 <- c(0.11, 0.2, 0.1, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.03, 0.04, 0.5, 0.6, 0.7, 0.9, 0.9)
+# PeriodLifeTable(mx=c(mxE11,mxE22,mxE33), age=rep(c(c(0,1), seq(5, 85, 5)),3),ax=rep(rep(NA,19),3),sex = 1, full.table=TRUE)
 
 .KTExtension <- function(lx70) {
 	# lx70: lx for 70 and older (should have 4 rows - one for each age group 
@@ -90,38 +92,26 @@
 
 .young_age_extension <- function(mx, sex) {
 	# for age bins 0, 1-4 calculate the ax
-	# mx: mortality rates for ages 0 (mx[1]), 1-4 (mx[2])
+	# mx: mortality rates for ages 0 (mx[1,]), 1-4 (mx[2,])
 	# sex: 1 - male, 2 - female. different sexes have different ax (see p.48
 	# 	   Preston et al, Demography: measuring and modeling population processes, 
 	#      2001). "The lower the mortality, the more heavily will infant deaths be
 	#	   concentrated at the earliest stages of infancy". The contingency table
 	#      is based on Coale and Demeny (1983), who fitted a line to international
 	#      and intertemporal data
-	ax = rep(NA,2) # initiate ax
+	ax = matrix(NA, nrow=dim(mx)[1],ncol=dim(mx)[2]) # initiate ax
 	if (sex == 1) {
-		if (mx[1] >= 0.107) {
-			ax[1] <- 0.330
-			ax[2] <- 1.352
-		}
-		else {
-			ax[1] <- 0.045 + 2.684 * mx[1]
-			ax[2] <- 1.651 - 2.816 * mx[1]
-		}
+		ax[1,] <- ifelse(mx[1,]>=0.107, 0.330, 0.045 + 2.684 * mx[1,])
+		ax[2,] <- ifelse(mx[1,]>=0.107, 1.352, 1.651 - 2.816 * mx[1,])
 	}
 
 	else if (sex == 2) {
-		if (mx[1] >= 0.107) {
-			ax[1] <- 0.350
-			ax[2] <- 1.361
-		}
-		else {
-			ax[1] <- 0.053 + 2.800 * mx[1]
-			ax[2] <- 1.522 - 1.518 * mx[1]
-		}
+		ax[1,] <- ifelse(mx[1,]>=0.107, 0.350, 0.053 + 2.800 * mx[1,])
+		ax[2,] <- ifelse(mx[1,]>=0.107, 1.361, 1.522 - 1.518 * mx[1,])
 	}
 
 	else stop("Sex must be 1 (male) or 2 (female)")
-	
+	ax <- c(ax) # put columns on top of each other into a vector
 	return(ax)
 }
 
