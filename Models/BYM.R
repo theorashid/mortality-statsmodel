@@ -34,18 +34,21 @@ grid.lookup <- mortality_m %>% # lookup correct MSOA or LAD for that LSOA
 grid.lookup <- as.matrix(grid.lookup) # grid.lookup[j, 2] for MSOA, grid.lookup[j, 3] for LAD
 
 # Shape data
-test <- readOGR(dsn = "Data/shapefiles/ldn_LSOA11",
+shapefile <- readOGR(dsn = "Data/shapefiles/ldn_LSOA11",
                 layer = "LSOA11_London")
-# Merge with mortality
 
-# test1 = subset(test, code=="HF") # load for hammersmith and fulham
+# Merge with mortality
+colnames(shapefile@data)[1] <- "LSOA2011"
+shapefile <- merge(shapefile, distinct(select(mortality_m, LSOA2011, LSOA.id, LAD.id)))
+shapefile <- shapefile[!is.na(shapefile$LSOA.id) ,] # remove NA rows for subsetting (Hammersmith and Fulahm)
+shapefile <- shapefile[order(shapefile$LSOA.id),] # reorder on LSOA.id
+row.names(shapefile@data) <- shapefile@data$LSOA.id
 
 # Extract adjacency matrix
-W.nb <- poly2nb(test, row.names =  rownames(test@data))
+W.nb <- poly2nb(shapefile, row.names = rownames(shapefile@data))
 nbInfo <- nb2WB(W.nb)
 # nbInfo$adj
 # adj = nbInfo$adj, weights = nbInfo$weights, num = nbInfo$num
-# s[1:N] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N], tau, zero_mean = 0)
 
 # Dimensions (Hammersmith and Fulham unit test second value):
 # - age -- 19 (0, 1-4, 5-10, ..., 80-84, 85+)
@@ -66,3 +69,127 @@ sigma_u ~ dunif(0,2)
 tau_u <- pow(sigma_u,-2)
 sigma_v ~ dunif(0,2)
 tau_v <- pow(sigma_v,-2)
+
+
+# ----- BUILD THE MODEL -----
+# Indices:
+# - a -- age
+# - j -- space, each LSOA
+# - t -- year (time)
+code <- nimbleCode({
+  # PRIORS
+
+  # COMMON TERMS
+  #dnorm is mean, precision
+	alpha0 ~ dnorm(0, 0.00001)
+	beta0  ~ dnorm(0, 0.00001)
+    
+  # AREA TERMS -- BYM prior for LSOAs (not BYM2 as do not need to interpret)
+  # No hierarchy
+  # Structured intercept and slope with a CAR prior
+  alpha_u[1:N_LSOA] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N], tau_alpha_u, zero_mean = 0)
+  beta_u[1:N_LSOA]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N], tau_beta_u, zero_mean = 0)
+	# Unstructured IID intercept and slope
+  for(j in 1:N_LSOA){
+    alpha_v[j] ~ dnorm(alpha0 + alpha_u[j], tau_alpha_v) # centred on common + CAR term
+    beta_v[j]  ~ dnorm(beta0 + beta_u[j], tau_beta_v)
+	}
+  sigma_alpha_u ~ dunif(0,2)
+	tau_alpha_u <- pow(sigma_alpha_u,-2)
+  sigma_beta_u ~ dunif(0,2)
+	tau_beta_u <- pow(sigma_beta_u,-2)
+	sigma_alpha_v ~ dunif(0,2)
+	tau_alpha_v <- pow(sigma_alpha_v,-2)
+	sigma_beta_v ~ dunif(0,2)
+	tau_beta_v <- pow(sigma_beta_v,-2)
+
+  # AGE TERMS
+	alpha_age[1] <- 0 # initialise first terms for RW
+	beta_age[1]  <- 0
+	for(a in 2:N_age_groups){
+    alpha_age[a] ~ dnorm(alpha_age[a-1], tau_alpha_age) # RW based on previous age group
+		beta_age[a]  ~ dnorm(beta_age[a-1], tau_beta_age)
+	}
+	sigma_alpha_age ~ dunif(0,2)
+	tau_alpha_age <- pow(sigma_alpha_age,-2)
+	sigma_beta_age ~ dunif(0,2)
+	tau_beta_age <- pow(sigma_beta_age,-2)
+
+    # Put all parameters together into indexed lograte
+	for(a in 1:N_age_groups){
+    for(j in 1:N_LSOA){
+      for(t in 1:N_year){
+        # centre t for improved sampling performance
+		    lograte[a, j, t] <- (alpha_v[j] + alpha_age[a]) + (beta_v[j] + beta_age[a]) * (t - 8)
+      }
+    }
+  }
+
+  # LIKELIHOOD
+  # N total number of cells, i.e. ages*years*areas(*sex)
+  for (i in 1:N) {
+    # y is number of deaths in that cell, assumed Poisson 
+		# mu is predicted number of deaths in that cell
+    y[i] ~ dpois(mu[i])
+    log(mu[i]) <- log(n[i]) + lograte[age[i], LSOA[i], yr[i]]
+  }
+})
+
+constants <- list(N = nrow(mortality_m),
+                  N_year = n_distinct(mortality_m$YEAR),
+                  N_LSOA = n_distinct(mortality_m$LSOA2011),
+                  N_LAD = n_distinct(mortality_m$LAD2011),
+                  N_age_groups = n_distinct(mortality_m$age_group),
+                  L = length(nbInfo$adj), 
+                  adj = nbInfo$adj,
+                  weights = nbInfo$weights,
+                  num = nbInfo$num,
+                  grid.lookup = grid.lookup)
+data <- list(y = mortality_m$deaths,
+             n = mortality_m$population, 
+             age = mortality_m$age_group.id,
+             LSOA = mortality_m$LSOA.id, 
+             yr = mortality_m$YEAR.id)
+
+# ----- CREATE THE MODEL -----
+model <- nimbleModel(code = code, constants = constants, data = data) # model in R
+# model$getNodeNames() # look at nodes of model's DAG
+# model$plotGraph() # plot the DAG
+
+# ----- COMPILE THE MODEL IN C-CODE -----
+Cmodel <- compileNimble(model)
+
+# ----- MCMC INTEGRATION -----
+# Initial values for uninformative priors (top-level nodes)
+# Other values will be set from the model and subsequent
+# chains will begin using starting values where the 
+# previous chain ended
+inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01),
+                         sigma_alpha1 = runif(1, 0.01, 0.8), sigma_beta1 = runif(1, 0.01, 0.8),
+                         sigma_alpha_LAD = runif(1, 0.01, 0.8), sigma_beta_LAD = runif(1, 0.01, 0.8),
+                         sigma_alpha_age = runif(1, 0.01, 0.8), sigma_beta_age = runif(1, 0.01, 0.8))
+# Monitors
+# NIMBLE default only monitors top-level nodes
+# Need to monitor all nodes which make up lograte with no thinning
+monitors <- c("alpha1", "alpha_age", "beta1", "beta_age")
+# Other monitors to check covergence, with some thinning
+monitors2 <- c("alpha0", "beta0", "sigma_alpha1", "sigma_beta1",
+               "sigma_alpha_LAD", "sigma_beta_LAD", "sigma_alpha_age", "sigma_beta_age")
+
+# CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
+# 1. MCMC Configuration -- can be customised with different samplers
+mcmcConf <- configureMCMC(model = model,
+                          monitors = monitors, monitors2 = monitors2,
+                          thin = 1, thin2 = 50, print = TRUE) # input the R model
+
+# 2. Build and compile the MCMC
+Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
+Cmcmc <- compileNimble(Rmcmc)
+
+# 3. Run MCMC
+mcmc.out <- runMCMC(Cmcmc, inits = inits,
+                    niter = 10000, nchains = 2, nburnin = 1000,
+                    progressBar = TRUE, samples = TRUE, summary = TRUE)
+
+# ----- SAVE OUTPUT SAMPLES AND SUMMARY -----
+saveRDS(mcmc.out, file = "mcmc_out.rds")
