@@ -3,7 +3,9 @@
 # ----- BYM model -----
 # Common terms (normal prior) +
 # BYM for each LSOA +
-# Age effects (random walk prior)
+# Age effects (random walk prior) +
+# age-space interactions (normal prior) +
+# age-space-time overdispersion (normal prior)
 # --------------------
 
 library(rgdal)
@@ -40,7 +42,6 @@ row.names(shapefile@data) <- shapefile@data$LSOA.id
 # Extract adjacency matrix
 W.nb <- poly2nb(shapefile, row.names = rownames(shapefile@data))
 nbInfo <- nb2WB(W.nb)
-# nbInfo$adj
 # adj = nbInfo$adj, weights = nbInfo$weights, num = nbInfo$num
 
 # Dimensions (Hammersmith and Fulham unit test second value):
@@ -49,20 +50,6 @@ nbInfo <- nb2WB(W.nb)
 # - MSOA -- 983 or 25
 # - LSOA -- 4835 or 113
 # - YEAR -- 14 (2004-17)
-
-# BYM - u structured CAR effect, v unstructured
-# N is number of spatial units
-# L is the length of the adjacency matrix
-u[1:N] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N], tau_u, zero_mean = 0)
-for (j in 1:N) {
-    tmp[j] <- alpha + u[j]
-    v[j] ~ dnorm(tmp[j], tau_v)
-}
-sigma_u ~ dunif(0,2)
-tau_u <- pow(sigma_u,-2)
-sigma_v ~ dunif(0,2)
-tau_v <- pow(sigma_v,-2)
-
 
 # ----- BUILD THE MODEL -----
 # Indices:
@@ -73,7 +60,6 @@ code <- nimbleCode({
   # PRIORS
 
   # COMMON TERMS
-  #dnorm is mean, precision
 	alpha0 ~ dnorm(0, 0.00001)
 	beta0  ~ dnorm(0, 0.00001)
     
@@ -108,15 +94,29 @@ code <- nimbleCode({
 	sigma_beta_age ~ dunif(0,2)
 	tau_beta_age <- pow(sigma_beta_age,-2)
 
-    # Put all parameters together into indexed lograte
+  # INTERACTIONS
+  # age-LSOA interactions
+  for(a in 1:N_age_groups){
+    for(j in 1:N_LSOA){
+      xi[a, j] ~ dnorm(alpha_age[a] + alpha_v[j], tau_xi) # centred on age + LSOA term
+    }
+  }
+  sigma_xi ~ dunif(0,2)
+  tau_xi <- pow(sigma_xi,-2)
+
+  # Put all parameters together into indexed lograte with age-LSOA-time overdispersion term
 	for(a in 1:N_age_groups){
     for(j in 1:N_LSOA){
-      for(t in 1:N_year){
+      epsilon[a, j, 1] <- xi[a, j]
+      for(t in 2:N_year){
         # centre t for improved sampling performance
-		    lograte[a, j, t] <- (alpha_v[j] + alpha_age[a]) + (beta_v[j] + beta_age[a]) * (t - 8)
+		    lograte[a, j, t] <- xi[a, j] + (beta_v[j] + beta_age[a]) * (t - 8) # xi covers age and space effects
+        epsilon[a, j, t] ~ dnorm(lograte[a, j, t], tau_epsilon) # overdispersion centred on lograte
       }
     }
   }
+  sigma_epsilon ~ dunif(0,2)
+  tau_epsilon <- pow(sigma_epsilon,-2)
 
   # LIKELIHOOD
   # N total number of cells, i.e. ages*years*areas(*sex)
@@ -124,7 +124,7 @@ code <- nimbleCode({
     # y is number of deaths in that cell, assumed Poisson 
 		# mu is predicted number of deaths in that cell
     y[i] ~ dpois(mu[i])
-    log(mu[i]) <- log(n[i]) + lograte[age[i], LSOA[i], yr[i]]
+    log(mu[i]) <- log(n[i]) + epsilon[age[i], LSOA[i], yr[i]]
   }
 })
 
@@ -157,16 +157,20 @@ Cmodel <- compileNimble(model)
 # chains will begin using starting values where the 
 # previous chain ended
 inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01),
-                         sigma_alpha1 = runif(1, 0.01, 0.8), sigma_beta1 = runif(1, 0.01, 0.8),
-                         sigma_alpha_LAD = runif(1, 0.01, 0.8), sigma_beta_LAD = runif(1, 0.01, 0.8),
-                         sigma_alpha_age = runif(1, 0.01, 0.8), sigma_beta_age = runif(1, 0.01, 0.8))
+                         sigma_alpha_u = runif(1, 0.01, 0.8), sigma_beta_u = runif(1, 0.01, 0.8),
+                         sigma_alpha_v = runif(1, 0.01, 0.8), sigma_beta_v = runif(1, 0.01, 0.8),
+                         sigma_alpha_age = runif(1, 0.01, 0.8), sigma_beta_age = runif(1, 0.01, 0.8),
+                         sigma_xi = runif(1, 0.01, 0.8), sigma_epsilon = runif(1, 0.01, 0.8))
 # Monitors
 # NIMBLE default only monitors top-level nodes
 # Need to monitor all nodes which make up lograte with no thinning
-monitors <- c("alpha1", "alpha_age", "beta1", "beta_age")
+monitors <- c("mu")
 # Other monitors to check covergence, with some thinning
-monitors2 <- c("alpha0", "beta0", "sigma_alpha1", "sigma_beta1",
-               "sigma_alpha_LAD", "sigma_beta_LAD", "sigma_alpha_age", "sigma_beta_age")
+monitors2 <- c("alpha0", "beta0",
+               "sigma_alpha_u", "sigma_beta_u",
+               "sigma_alpha_v", "sigma_beta_v",
+               "sigma_alpha_age", "sigma_beta_age",
+               "sigma_xi", "sigma_epsilon")
 
 # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # 1. MCMC Configuration -- can be customised with different samplers
