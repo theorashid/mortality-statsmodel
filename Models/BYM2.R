@@ -40,6 +40,7 @@ shapefile <- readOGR(dsn = "Data/shapefiles/ldn_LSOA11",
 colnames(shapefile@data)[1] <- "LSOA2011"
 shapefile <- merge(shapefile, distinct(select(mortality_m, LSOA2011, LSOA.id, LAD.id)))
 shapefile <- shapefile[!is.na(shapefile$LSOA.id) ,] # remove NA rows for subsetting (Hammersmith and Fulahm)
+shapefile <- shapefile[order(shapefile$LSOA.id),] # reorder on LSOA.id
 row.names(shapefile@data) <- shapefile@data$LSOA.id
 
 # Extract adjacency matrix
