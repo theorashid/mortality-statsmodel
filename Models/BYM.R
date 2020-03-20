@@ -131,7 +131,6 @@ code <- nimbleCode({
 constants <- list(N = nrow(mortality_m),
                   N_year = n_distinct(mortality_m$YEAR),
                   N_LSOA = n_distinct(mortality_m$LSOA2011),
-                  N_LAD = n_distinct(mortality_m$LAD2011),
                   N_age_groups = n_distinct(mortality_m$age_group),
                   L = length(nbInfo$adj), 
                   adj = nbInfo$adj,
