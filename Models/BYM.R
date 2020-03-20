@@ -66,8 +66,8 @@ code <- nimbleCode({
   # AREA TERMS -- BYM prior for LSOAs (not BYM2 as do not need to interpret)
   # No hierarchy
   # Structured intercept and slope with a CAR prior
-  alpha_u[1:N_LSOA] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N], tau_alpha_u, zero_mean = 0)
-  beta_u[1:N_LSOA]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N], tau_beta_u, zero_mean = 0)
+  alpha_u[1:N_LSOA] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_LSOA], tau_alpha_u, zero_mean = 0)
+  beta_u[1:N_LSOA]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_LSOA], tau_beta_u, zero_mean = 0)
 	# Unstructured IID intercept and slope
   for(j in 1:N_LSOA){
     alpha_v[j] ~ dnorm(alpha0 + alpha_u[j], tau_alpha_v) # centred on common + CAR term
