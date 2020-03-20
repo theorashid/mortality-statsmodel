@@ -26,13 +26,6 @@ mortality_m <- mortality %>% # Select male sex
   filter(sex == 1) %>%
   select(-sex)
 
-# Lookup table
-grid.lookup <- mortality_m %>% # lookup correct MSOA or LAD for that LSOA
-  select(LSOA.id, MSOA.id, LAD.id) %>%
-  distinct() %>%
-  arrange(LSOA.id) # arrange ascending so matches loop order
-grid.lookup <- as.matrix(grid.lookup) # grid.lookup[j, 2] for MSOA, grid.lookup[j, 3] for LAD
-
 # Shape data
 shapefile <- readOGR(dsn = "Data/shapefiles/ldn_LSOA11",
                 layer = "LSOA11_London")
@@ -143,8 +136,7 @@ constants <- list(N = nrow(mortality_m),
                   L = length(nbInfo$adj), 
                   adj = nbInfo$adj,
                   weights = nbInfo$weights,
-                  num = nbInfo$num,
-                  grid.lookup = grid.lookup)
+                  num = nbInfo$num)
 data <- list(y = mortality_m$deaths,
              n = mortality_m$population, 
              age = mortality_m$age_group.id,
