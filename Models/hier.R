@@ -146,12 +146,12 @@ constants <- list(N = nrow(mortality_m),
                   N_LAD = n_distinct(mortality_m$LAD2011),
                   N_age_groups = n_distinct(mortality_m$age_group),
                   grid.lookup = grid.lookup,
-                  grid.lookup.MSOA = grid.lookup.MSOA)
+                  grid.lookup.MSOA = grid.lookup.MSOA,
+                  age = mortality_m$age_group.id,
+                  LSOA = mortality_m$LSOA.id, 
+                  yr = mortality_m$YEAR.id)
 data <- list(y = mortality_m$deaths,
-             n = mortality_m$population, 
-             age = mortality_m$age_group.id,
-             LSOA = mortality_m$LSOA.id, 
-             yr = mortality_m$YEAR.id)
+             n = mortality_m$population)
 
 # ----- CREATE THE MODEL -----
 model <- nimbleModel(code = code, constants = constants, data = data) # model in R

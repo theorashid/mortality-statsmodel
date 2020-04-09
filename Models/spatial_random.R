@@ -79,12 +79,12 @@ code <- nimbleCode({
 constants <- list(N = nrow(mortality_m),
                   N_year = n_distinct(mortality_m$YEAR),
                   N_LSOA = n_distinct(mortality_m$LSOA2011),
-                  N_age_groups = n_distinct(mortality_m$age_group))
+                  N_age_groups = n_distinct(mortality_m$age_group),
+                  age = mortality_m$age_group.id,
+                  LSOA = mortality_m$LSOA.id, 
+                  yr = mortality_m$YEAR.id)
 data <- list(y = mortality_m$deaths,
-             n = mortality_m$population, 
-             age = mortality_m$age_group.id,
-             LSOA = mortality_m$LSOA.id, 
-             yr = mortality_m$YEAR.id)
+             n = mortality_m$population)
 
 # ----- CREATE THE MODEL -----
 model <- nimbleModel(code = code, constants = constants, data = data) # model in R
