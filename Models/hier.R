@@ -174,8 +174,8 @@ inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01),
                          sigma_xi = runif(1, 0.01, 0.8), sigma_epsilon = runif(1, 0.01, 0.8))
 # Monitors
 # NIMBLE default only monitors top-level nodes
-# Need to monitor all nodes which make up lograte with no thinning
-monitors <- c("mu")
+# Monitor death rate per person with no thinning
+monitors <- c("lograte")
 # Other monitors to check covergence, with some thinning
 monitors2 <- c("alpha0", "beta0",
                "sigma_alpha_LSOA", "sigma_beta_LSOA",
