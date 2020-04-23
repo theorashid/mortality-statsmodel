@@ -1,4 +1,4 @@
-# Theo AO Rashid -- March 2020
+# Theo AO Rashid -- April 2020
 
 # ----- Hierarchical model -----
 # Common terms (normal prior) +
@@ -153,8 +153,21 @@ constants <- list(N = nrow(mortality_m),
 data <- list(y = mortality_m$deaths,
              n = mortality_m$population)
 
+# Initial values for uninformative priors (top-level nodes)
+# mu, lograte, alpha_age, beta_age not initialise
+inits <- list(alpha0 = -5.5, beta0 = 0.2,
+              # alpha_MSOA = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              # beta_MSOA = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              # alpha_LSOA = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              # beta_LSOA = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              sigma_alpha_MSOA = 0.1, sigma_beta_MSOA = 0.1,
+              sigma_alpha_LSOA = 0.1, sigma_beta_LSOA = 0.1,
+              sigma_alpha_LAD = 0.1, sigma_beta_LAD = 0.1,
+              sigma_alpha_age = 0.75, sigma_beta_age = 0.015,
+              sigma_xi = 0.08)
+
 # ----- CREATE THE MODEL -----
-model <- nimbleModel(code = code, constants = constants, data = data) # model in R
+model <- nimbleModel(code = code, constants = constants, inits = inits, data = data) # model in R
 # model$getNodeNames() # look at nodes of model's DAG
 # model$plotGraph() # plot the DAG
 
@@ -162,16 +175,6 @@ model <- nimbleModel(code = code, constants = constants, data = data) # model in
 Cmodel <- compileNimble(model)
 
 # ----- MCMC INTEGRATION -----
-# Initial values for uninformative priors (top-level nodes)
-# Other values will be set from the model and subsequent
-# chains will begin using starting values where the 
-# previous chain ended
-inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01),
-                         sigma_alpha_LSOA = runif(1, 0.01, 0.8), sigma_beta_LSOA = runif(1, 0.01, 0.8),
-                         sigma_alpha_MSOA = runif(1, 0.01, 0.8), sigma_beta_MSOA = runif(1, 0.01, 0.8),
-                         sigma_alpha_LAD = runif(1, 0.01, 0.8), sigma_beta_LAD = runif(1, 0.01, 0.8),
-                         sigma_alpha_age = runif(1, 0.01, 0.8), sigma_beta_age = runif(1, 0.01, 0.8),
-                         sigma_xi = runif(1, 0.01, 0.8), sigma_epsilon = runif(1, 0.01, 0.8))
 # Monitors
 # NIMBLE default only monitors top-level nodes
 # Monitor death rate per person with no thinning
@@ -186,17 +189,17 @@ monitors2 <- c("alpha0", "beta0",
 
 # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # 1. MCMC Configuration -- can be customised with different samplers
-mcmcConf <- configureMCMC(model = model,
+mcmcConf <- configureMCMC(model = Cmodel,
                           monitors = monitors, monitors2 = monitors2,
-                          thin = 1, thin2 = 50, print = TRUE) # input the R model
+                          thin = 5, thin2 = 250, print = TRUE) # input the R model
 
 # 2. Build and compile the MCMC
 Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
 Cmcmc <- compileNimble(Rmcmc)
 
 # 3. Run MCMC
-mcmc.out <- runMCMC(Cmcmc, inits = inits,
-                    niter = 10000, nchains = 2, nburnin = 1000,
+mcmc.out <- runMCMC(Cmcmc,
+                    niter = 50000, nchains = 2, nburnin = 1000,
                     progressBar = TRUE, samples = TRUE, summary = TRUE)
 
 # ----- SAVE OUTPUT SAMPLES AND SUMMARY -----

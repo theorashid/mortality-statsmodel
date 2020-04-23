@@ -1,4 +1,4 @@
-# Theo AO Rashid -- March 2020
+# Theo AO Rashid -- April 2020
 
 # ----- BYM model -----
 # Common terms (normal prior) +
@@ -142,8 +142,20 @@ constants <- list(N = nrow(mortality_m),
 data <- list(y = mortality_m$deaths,
              n = mortality_m$population)
 
+# Initial values for uninformative priors (top-level nodes)
+# mu, lograte, alpha_age, beta_age not initialised
+inits <- list(alpha0 = -5.5, beta0 = 0.2,
+              alpha_u = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              beta_u = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              sigma_alpha_u = 0.1, sigma_beta_u = 0.1,
+              alpha_v = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              beta_v = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+              sigma_alpha_v = 0.1, sigma_beta_v = 0.1,
+              sigma_alpha_age = 0.75, sigma_beta_age = 0.015,
+              sigma_xi = 0.08)
+
 # ----- CREATE THE MODEL -----
-model <- nimbleModel(code = code, constants = constants, data = data) # model in R
+model <- nimbleModel(code = code, constants = constants, inits = inits, data = data) # model in R
 # model$getNodeNames() # look at nodes of model's DAG
 # model$plotGraph() # plot the DAG
 
@@ -173,9 +185,9 @@ monitors2 <- c("alpha0", "beta0",
 
 # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # 1. MCMC Configuration -- can be customised with different samplers
-mcmcConf <- configureMCMC(model = model,
+mcmcConf <- configureMCMC(model = Cmodel,
                           monitors = monitors, monitors2 = monitors2,
-                          thin = 1, thin2 = 50, print = TRUE) # input the R model
+                          thin = 5, thin2 = 250, print = TRUE) # input the R model
 
 # 2. Build and compile the MCMC
 Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
@@ -183,7 +195,7 @@ Cmcmc <- compileNimble(Rmcmc)
 
 # 3. Run MCMC
 mcmc.out <- runMCMC(Cmcmc, inits = inits,
-                    niter = 10000, nchains = 2, nburnin = 1000,
+                    niter = 50000, nchains = 2, nburnin = 1000,
                     progressBar = TRUE, samples = TRUE, summary = TRUE)
 
 # ----- SAVE OUTPUT SAMPLES AND SUMMARY -----
