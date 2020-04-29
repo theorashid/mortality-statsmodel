@@ -4,8 +4,10 @@
 # Common terms (normal prior) +
 # BYM for each LSOA +
 # Age effects (random walk prior) +
-# age-space interactions (normal prior) +
-# age-space-time overdispersion (normal prior)
+# Age-LSOA interaction (normal prior) +
+# Age-time interaction (random walk prior) +
+# LSOA-time interaction (random walk prior) +
+# Overdispersion term (normal prior)
 # --------------------
 
 library(rgdal)
@@ -95,28 +97,49 @@ code <- nimbleCode({
 	tau_beta_age <- pow(sigma_beta_age,-2)
 
   # INTERACTIONS
-  # age-LSOA interactions
-  for(a in 1:N_age_groups){
-    for(j in 1:N_LSOA){
-      xi[a, j] ~ dnorm(alpha_age[a] + alpha_v[j], tau_xi) # centred on age + LSOA term
-    }
-  }
-  sigma_xi ~ dunif(0,2)
-  tau_xi <- pow(sigma_xi,-2)
-
+	# age-LSOA interactions
+	for(a in 1:N_age_groups){
+	  for(j in 1:N_LSOA){
+	    xi[a, j] ~ dnorm(alpha_age[a] + alpha_v[j], tau_xi) # centred on age + LSOA term
+	  }
+	}
+	sigma_xi ~ dunif(0,2)
+	tau_xi <- pow(sigma_xi,-2)
+	
+	# LSOA-time interactions
+	for(j in 1:N_LSOA){
+	  nu[j, 1] <- 0
+	  for(t in 2:N_year){
+	    # the difference between timesteps is beta_v * time (where timestep length is 1 year)
+	    nu[j, t] ~ dnorm(nu[j, t-1] + beta_v[j], tau_nu) # beta_v incorporates beta term
+	  }
+	}
+	sigma_nu ~ dunif(0,2)
+	tau_nu <- pow(sigma_nu,-2)
+	
+	# age-time interactions
+	for(a in 1:N_age_groups){
+	  gamma[a, 1] <- 0
+	  for(t in 2:N_year){
+	    # the difference between timesteps is beta_age * time (where timestep length is 1 year)
+	    gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], tau_gamma)
+	  }
+	}
+	sigma_gamma ~ dunif(0,2)
+	tau_gamma <- pow(sigma_gamma,-2)
+	
   # Put all parameters together into indexed lograte with age-LSOA-time overdispersion term
 	for(a in 1:N_age_groups){
     for(j in 1:N_LSOA){
       epsilon[a, j, 1] <- xi[a, j]
       for(t in 2:N_year){
-        # centre t for improved sampling performance
-		    lograte[a, j, t] <- xi[a, j] + (beta_v[j] + beta_age[a]) * (t - 8) # xi covers age and space effects
-        epsilon[a, j, t] ~ dnorm(lograte[a, j, t], tau_epsilon) # overdispersion centred on lograte
+		    lograte[a, j, t] <- xi[a, j] + nu[j, t] + gamma[a, t]
+		    epsilon[a, j, t] ~ dnorm(lograte[a, j, t], tau_epsilon)
       }
     }
-  }
-  sigma_epsilon ~ dunif(0,2)
-  tau_epsilon <- pow(sigma_epsilon,-2)
+	}
+	sigma_epsilon ~ dunif(0,2)
+	tau_epsilon <- pow(sigma_epsilon,-2)
 
   # LIKELIHOOD
   # N total number of cells, i.e. ages*years*areas(*sex)
@@ -152,7 +175,8 @@ inits <- list(alpha0 = -5.5, beta0 = 0.2,
               beta_v = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
               sigma_alpha_v = 0.1, sigma_beta_v = 0.1,
               sigma_alpha_age = 0.75, sigma_beta_age = 0.015,
-              sigma_xi = 0.08)
+              sigma_xi = 0.08, sigma_nu = 0.1,
+              sigma_gamma = 0.1, sigma_epsilon = 0.1)
 
 # ----- CREATE THE MODEL -----
 model <- nimbleModel(code = code, constants = constants, inits = inits, data = data) # model in R
@@ -163,25 +187,17 @@ model <- nimbleModel(code = code, constants = constants, inits = inits, data = d
 Cmodel <- compileNimble(model)
 
 # ----- MCMC INTEGRATION -----
-# Initial values for uninformative priors (top-level nodes)
-# Other values will be set from the model and subsequent
-# chains will begin using starting values where the 
-# previous chain ended
-inits <- function() list(alpha0 = rnorm(1,-5,1), beta0 = rnorm(1,-0.1,0.01),
-                         sigma_alpha_u = runif(1, 0.01, 0.8), sigma_beta_u = runif(1, 0.01, 0.8),
-                         sigma_alpha_v = runif(1, 0.01, 0.8), sigma_beta_v = runif(1, 0.01, 0.8),
-                         sigma_alpha_age = runif(1, 0.01, 0.8), sigma_beta_age = runif(1, 0.01, 0.8),
-                         sigma_xi = runif(1, 0.01, 0.8), sigma_epsilon = runif(1, 0.01, 0.8))
 # Monitors
 # NIMBLE default only monitors top-level nodes
 # Monitor death rate per person with no thinning
-monitors <- c("lograte")
+monitors <- c("epsilon")
 # Other monitors to check covergence, with some thinning
 monitors2 <- c("alpha0", "beta0",
                "sigma_alpha_u", "sigma_beta_u",
                "sigma_alpha_v", "sigma_beta_v",
                "sigma_alpha_age", "sigma_beta_age",
-               "sigma_xi", "sigma_epsilon")
+               "sigma_xi", "sigma_nu",
+               "sigma_gamma", "sigma_epsilon")
 
 # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # 1. MCMC Configuration -- can be customised with different samplers
