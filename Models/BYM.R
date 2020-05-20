@@ -1,13 +1,14 @@
-# Theo AO Rashid -- April 2020
+# Theo AO Rashid -- May 2020
 
 # ----- BYM model -----
+# Negative binomial likelihood
+#
 # Common terms (normal prior) +
 # BYM for each LSOA +
 # Age effects (random walk prior) +
 # Age-LSOA interaction (normal prior) +
 # Age-time interaction (random walk prior) +
-# LSOA-time interaction (random walk prior) +
-# Overdispersion term (normal prior)
+# LSOA-time interaction (random walk prior)
 # --------------------
 
 library(rgdal)
@@ -131,24 +132,22 @@ code <- nimbleCode({
   # Put all parameters together into indexed lograte with age-LSOA-time overdispersion term
 	for(a in 1:N_age_groups){
     for(j in 1:N_LSOA){
-      epsilon[a, j, 1] <- xi[a, j]
-      for(t in 2:N_year){
+      for(t in 1:N_year){
 		    lograte[a, j, t] <- xi[a, j] + nu[j, t] + gamma[a, t]
-		    epsilon[a, j, t] ~ dnorm(lograte[a, j, t], tau_epsilon)
       }
     }
 	}
-	sigma_epsilon ~ dunif(0,2)
-	tau_epsilon <- pow(sigma_epsilon,-2)
 
   # LIKELIHOOD
   # N total number of cells, i.e. ages*years*areas(*sex)
   for (i in 1:N) {
-    # y is number of deaths in that cell, assumed Poisson 
-		# mu is predicted number of deaths in that cell
-    y[i] ~ dpois(mu[i])
-    log(mu[i]) <- log(n[i]) + epsilon[age[i], LSOA[i], yr[i]]
+    # y is number of deaths in that cell
+    # mu is predicted number of deaths in that cell
+    y[i] ~ dnegbin(p[i], r)
+    p[i] <- r/(r + mu[i])
+    log(mu[i]) <- log(n[i]) + lograte[age[i], LSOA[i], yr[i]]
   }
+  r ~ dunif(0,50)
 })
 
 constants <- list(N = nrow(mortality_m),
@@ -176,7 +175,7 @@ inits <- list(alpha0 = -5.5, beta0 = 0.2,
               sigma_alpha_v = 0.1, sigma_beta_v = 0.1,
               sigma_alpha_age = 0.75, sigma_beta_age = 0.015,
               sigma_xi = 0.08, sigma_nu = 0.1,
-              sigma_gamma = 0.1, sigma_epsilon = 0.1)
+              sigma_gamma = 0.1, r = 1.0)
 
 # ----- CREATE THE MODEL -----
 model <- nimbleModel(code = code, constants = constants, inits = inits, data = data) # model in R
@@ -190,14 +189,14 @@ Cmodel <- compileNimble(model)
 # Monitors
 # NIMBLE default only monitors top-level nodes
 # Monitor death rate per person with no thinning
-monitors <- c("epsilon")
+monitors <- c("lograte")
 # Other monitors to check covergence, with some thinning
 monitors2 <- c("alpha0", "beta0",
                "sigma_alpha_u", "sigma_beta_u",
                "sigma_alpha_v", "sigma_beta_v",
                "sigma_alpha_age", "sigma_beta_age",
                "sigma_xi", "sigma_nu",
-               "sigma_gamma", "sigma_epsilon")
+               "sigma_gamma", "r")
 
 # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # 1. MCMC Configuration -- can be customised with different samplers
