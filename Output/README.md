@@ -1,5 +1,3 @@
-# Output
+# Example outputs
 
-Test
-
-<iframe id="igraph" scrolling="no" style="border:none;" seamless="seamless" src="Output/le_map_hier_nb.html" height="525" width="100%"></iframe>
+This folder contains some output animations for runs on simulated mortality data for the Lonodon borough of Hammersmith and Fulham. Please download and make sure the extension is `.html`, and drag into your browser to view.
