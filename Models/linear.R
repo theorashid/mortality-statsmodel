@@ -35,27 +35,26 @@ mortality_m <- mortality %>% # Select male sex
 # - t -- year (time)
 code <- nimbleCode({
   # PRIORS
-	#dnorm is mean, precision
-	alpha0 ~ dnorm(0, 0.00001)
-	beta0  ~ dnorm(0, 0.00001)
-
+  #dnorm is mean, precision
+  alpha0 ~ dnorm(0, 0.00001)
+  beta0  ~ dnorm(0, 0.00001)
   # Put all parameters together into indexed lograte
-	for(a in 1:N_age_groups){
+  for(a in 1:N_age_groups){
     for(j in 1:N_LSOA){
-	    for(t in 1:N_year){
-	      # remember to centre your t to improve sampling performance
+      for(t in 1:N_year){
+        # remember to centre your t to improve sampling performance
         # (cuts down correlation between parameters)
         # DO NOT make it a dynamic centrering
-				lograte[a, j, t] <- alpha0 + beta0 * (t - 8)
+        lograte[a, j, t] <- alpha0 + beta0 * (t - 8)
       }
     }
   }
-
+  
   # LIKELIHOOD
   # N total number of cells, i.e. ages*years*areas(*sex)
   for (i in 1:N) {
     # y is number of deaths in that cell, assumed Poisson 
-		# mu is predicted number of deaths in that cell
+    # mu is predicted number of deaths in that cell
     y[i] ~ dpois(mu[i])
     log(mu[i]) <- log(n[i]) + lograte[age[i], LSOA[i], yr[i]]
   }
