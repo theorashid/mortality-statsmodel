@@ -57,108 +57,94 @@ grid.lookup.MSOA <- as.matrix(grid.lookup.MSOA) # grid.lookup[j, 2] for LAD
 # - j -- space, each LSOA
 # - t -- year (time)
 code <- nimbleCode({
-    # PRIORS
-
-    # COMMON TERMS
+	# PRIORS
+	
+	# COMMON TERMS
 	alpha0 ~ dnorm(0, 0.00001)
 	beta0  ~ dnorm(0, 0.00001)
-    
-    # AREA TERMS -- random effects for intercepts and slopes
+	# AREA TERMS -- random effects for intercepts and slopes
 	# Lower level term centred on higher level
-    
-    # LAD terms
-    for(j_LAD in 1:N_LAD){
-        alpha_LAD[j_LAD] ~ dnorm(alpha0, tau_alpha_LAD) # centred on common terms
-        beta_LAD[j_LAD] ~ dnorm(beta0, tau_beta_LAD)
-    }
-    sigma_alpha_LAD ~ dunif(0,2)
-	tau_alpha_LAD <- pow(sigma_alpha_LAD,-2)
+	# LAD terms
+	for(j_LAD in 1:N_LAD){
+		alpha_LAD[j_LAD] ~ dnorm(alpha0, sd = sigma_alpha_LAD) # centred on common terms
+		beta_LAD[j_LAD] ~ dnorm(beta0, sd = sigma_beta_LAD)
+	}
+	sigma_alpha_LAD ~ dunif(0,2)
 	sigma_beta_LAD  ~ dunif(0,2)
-	tau_beta_LAD  <- pow(sigma_beta_LAD,-2)
-
-    # MSOA terms
-    for(j_MSOA in 1:N_MSOA){
-        alpha_MSOA[j_MSOA] ~ dnorm(alpha_LAD[grid.lookup.MSOA[j_MSOA, 2]], tau_alpha_MSOA) # centred on LAD terms
-        beta_MSOA[j_MSOA] ~ dnorm(beta_LAD[grid.lookup.MSOA[j_MSOA, 2]], tau_beta_MSOA)
-    }
-    sigma_alpha_MSOA ~ dunif(0,2)
-	tau_alpha_MSOA <- pow(sigma_alpha_MSOA,-2)
+	
+	# MSOA terms
+	for(j_MSOA in 1:N_MSOA){
+		alpha_MSOA[j_MSOA] ~ dnorm(alpha_LAD[grid.lookup.MSOA[j_MSOA, 2]], sd = sigma_alpha_MSOA) # centred on LAD terms
+		beta_MSOA[j_MSOA] ~ dnorm(beta_LAD[grid.lookup.MSOA[j_MSOA, 2]], sd = sigma_beta_MSOA)
+	}
+	sigma_alpha_MSOA ~ dunif(0,2)
 	sigma_beta_MSOA  ~ dunif(0,2)
-	tau_beta_MSOA  <- pow(sigma_beta_MSOA,-2)
-
-    # LSOA terms
+	
+	# LSOA terms
 	for(j in 1:N_LSOA){ # j_LSOA = j
-        alpha_LSOA[j] ~ dnorm(alpha_MSOA[grid.lookup[j, 2]], tau_alpha_LSOA) # centred on MSOA terms
-		beta_LSOA[j]  ~ dnorm(beta_MSOA[grid.lookup[j, 2]], tau_beta_LSOA)
+		alpha_LSOA[j] ~ dnorm(alpha_MSOA[grid.lookup[j, 2]], sd = sigma_alpha_LSOA) # centred on MSOA terms
+		beta_LSOA[j]  ~ dnorm(beta_MSOA[grid.lookup[j, 2]], sd = sigma_alpha_LSOA)
 	}
 	sigma_alpha_LSOA ~ dunif(0,2)
-	tau_alpha_LSOA <- pow(sigma_alpha_LSOA,-2)
 	sigma_beta_LSOA  ~ dunif(0,2)
-	tau_beta_LSOA  <- pow(sigma_beta_LSOA,-2)
-
-    # AGE TERMS
+	
+	# AGE TERMS
 	alpha_age[1] <- 0 # initialise first terms for RW
 	beta_age[1]  <- 0
 	for(a in 2:N_age_groups){
-		alpha_age[a] ~ dnorm(alpha_age[a-1], tau_alpha_age) # RW based on previous age group
-		beta_age[a]  ~ dnorm(beta_age[a-1], tau_beta_age)
+		alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
+		beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
 	}
 	sigma_alpha_age ~ dunif(0,2)
-	tau_alpha_age <- pow(sigma_alpha_age,-2)
 	sigma_beta_age ~ dunif(0,2)
-	tau_beta_age <- pow(sigma_beta_age,-2)
-
-    # INTERACTIONS
+	
+	# INTERACTIONS
 	# age-LSOA interactions
 	for(a in 1:N_age_groups){
-	  for(j in 1:N_LSOA){
-	    xi[a, j] ~ dnorm(alpha_age[a] + alpha_LSOA[j], tau_xi) # centred on age + LSOA term
-	  }
+		for(j in 1:N_LSOA){
+			xi[a, j] ~ dnorm(alpha_age[a] + alpha_LSOA[j], sd = sigma_xi) # centred on age + LSOA term
+		}
 	}
 	sigma_xi ~ dunif(0,2)
-	tau_xi <- pow(sigma_xi,-2)
 	
 	# LSOA-time interactions
 	for(j in 1:N_LSOA){
-	  nu[j, 1] <- 0
-	  for(t in 2:N_year){
-	    # the difference between timesteps is beta_v * time (where timestep length is 1 year)
-	    nu[j, t] ~ dnorm(nu[j, t-1] + beta_LSOA[j], tau_nu) # beta_v incorporates beta term
-	  }
+		nu[j, 1] <- 0
+		for(t in 2:N_year){
+			# the difference between timesteps is beta_v * time (where timestep length is 1 year)
+			nu[j, t] ~ dnorm(nu[j, t-1] + beta_LSOA[j], sd = sigma_nu) # beta_v incorporates beta term
+		}
 	}
 	sigma_nu ~ dunif(0,2)
-	tau_nu <- pow(sigma_nu,-2)
 	
 	# age-time interactions
 	for(a in 1:N_age_groups){
-	  gamma[a, 1] <- 0
-	  for(t in 2:N_year){
-	    # the difference between timesteps is beta_age * time (where timestep length is 1 year)
-	    gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], tau_gamma)
-	  }
+		gamma[a, 1] <- 0
+		for(t in 2:N_year){
+			# the difference between timesteps is beta_age * time (where timestep length is 1 year)
+			gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
+		}
 	}
 	sigma_gamma ~ dunif(0,2)
-	tau_gamma <- pow(sigma_gamma,-2)
-
-    # Put all parameters together into indexed lograte with age-LSOA-time overdispersion term
+	# Put all parameters together into indexed lograte with age-LSOA-time overdispersion term
 	for(a in 1:N_age_groups){
-	  for(j in 1:N_LSOA){
-	    for(t in 1:N_year){
-	      lograte[a, j, t] <- xi[a, j] + nu[j, t] + gamma[a, t]
-	    }
-	  }
+		for(j in 1:N_LSOA){
+			for(t in 1:N_year){
+				lograte[a, j, t] <- xi[a, j] + nu[j, t] + gamma[a, t]
+			}
+		}
 	}
-
-    # LIKELIHOOD
-  	# N total number of cells, i.e. ages*years*areas(*sex)
-  	for (i in 1:N) {
-    	# y is number of deaths in that cell
-    	# mu is predicted number of deaths in that cell
-    	y[i] ~ dnegbin(p[i], r)
-    	p[i] <- r/(r + mu[i])
-    	log(mu[i]) <- log(n[i]) + lograte[age[i], LSOA[i], yr[i]]
-  	}
-  	r ~ dunif(0,50)
+	
+	# LIKELIHOOD
+	# N total number of cells, i.e. ages*years*areas(*sex)
+	for (i in 1:N) {
+		# y is number of deaths in that cell
+		# mu is predicted number of deaths in that cell
+		y[i] ~ dnegbin(p[i], r)
+		p[i] <- r/(r + mu[i])
+		log(mu[i]) <- log(n[i]) + lograte[age[i], LSOA[i], yr[i]]
+	}
+	r ~ dunif(0,50)
 })
 
 constants <- list(N = nrow(mortality_m),
@@ -211,7 +197,7 @@ monitors2 <- c("alpha0", "beta0",
 # 1. MCMC Configuration -- can be customised with different samplers
 mcmcConf <- configureMCMC(model = Cmodel,
                           monitors = monitors, monitors2 = monitors2,
-                          thin = 5, thin2 = 250, print = TRUE) # input the R model
+                          thin = 1, thin2 = 100, print = TRUE) # input the R model
 
 # 2. Build and compile the MCMC
 Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC

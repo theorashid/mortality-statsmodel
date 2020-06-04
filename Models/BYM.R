@@ -61,82 +61,74 @@ nbInfo <- nb2WB(W.nb)
 # - t -- year (time)
 code <- nimbleCode({
   # PRIORS
-
   # COMMON TERMS
-	alpha0 ~ dnorm(0, 0.00001)
-	beta0  ~ dnorm(0, 0.00001)
-    
+  alpha0 ~ dnorm(0, 0.00001)
+  beta0  ~ dnorm(0, 0.00001)
+  
   # AREA TERMS -- BYM prior for LSOAs (not BYM2 as do not need to interpret)
   # No hierarchy
   # Structured intercept and slope with a CAR prior
   alpha_u[1:N_LSOA] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_LSOA], tau_alpha_u, zero_mean = 0)
   beta_u[1:N_LSOA]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_LSOA], tau_beta_u, zero_mean = 0)
-	# Unstructured IID intercept and slope
+  # Unstructured IID intercept and slope
   for(j in 1:N_LSOA){
-    alpha_v[j] ~ dnorm(alpha0 + alpha_u[j], tau_alpha_v) # centred on common + CAR term
-    beta_v[j]  ~ dnorm(beta0 + beta_u[j], tau_beta_v)
-	}
+    alpha_v[j] ~ dnorm(alpha0 + alpha_u[j], sd = sigma_alpha_v) # centred on common + CAR term
+    beta_v[j]  ~ dnorm(beta0 + beta_u[j], sd = sigma_beta_v)
+  }
   sigma_alpha_u ~ dunif(0,2)
-	tau_alpha_u <- pow(sigma_alpha_u,-2)
+  tau_alpha_u <- pow(sigma_alpha_u,-2)
   sigma_beta_u ~ dunif(0,2)
-	tau_beta_u <- pow(sigma_beta_u,-2)
-	sigma_alpha_v ~ dunif(0,2)
-	tau_alpha_v <- pow(sigma_alpha_v,-2)
-	sigma_beta_v ~ dunif(0,2)
-	tau_beta_v <- pow(sigma_beta_v,-2)
-
+  tau_beta_u <- pow(sigma_beta_u,-2)
+  sigma_alpha_v ~ dunif(0,2)
+  sigma_beta_v ~ dunif(0,2)
+  
   # AGE TERMS
-	alpha_age[1] <- 0 # initialise first terms for RW
-	beta_age[1]  <- 0
-	for(a in 2:N_age_groups){
-    alpha_age[a] ~ dnorm(alpha_age[a-1], tau_alpha_age) # RW based on previous age group
-		beta_age[a]  ~ dnorm(beta_age[a-1], tau_beta_age)
-	}
-	sigma_alpha_age ~ dunif(0,2)
-	tau_alpha_age <- pow(sigma_alpha_age,-2)
-	sigma_beta_age ~ dunif(0,2)
-	tau_beta_age <- pow(sigma_beta_age,-2)
-
+  alpha_age[1] <- 0 # initialise first terms for RW
+  beta_age[1]  <- 0
+  for(a in 2:N_age_groups){
+    alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
+    beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
+  }
+  sigma_alpha_age ~ dunif(0,2)
+  sigma_beta_age ~ dunif(0,2)
+  
   # INTERACTIONS
-	# age-LSOA interactions
-	for(a in 1:N_age_groups){
-	  for(j in 1:N_LSOA){
-	    xi[a, j] ~ dnorm(alpha_age[a] + alpha_v[j], tau_xi) # centred on age + LSOA term
-	  }
-	}
-	sigma_xi ~ dunif(0,2)
-	tau_xi <- pow(sigma_xi,-2)
-	
-	# LSOA-time interactions
-	for(j in 1:N_LSOA){
-	  nu[j, 1] <- 0
-	  for(t in 2:N_year){
-	    # the difference between timesteps is beta_v * time (where timestep length is 1 year)
-	    nu[j, t] ~ dnorm(nu[j, t-1] + beta_v[j], tau_nu) # beta_v incorporates beta term
-	  }
-	}
-	sigma_nu ~ dunif(0,2)
-	tau_nu <- pow(sigma_nu,-2)
-	
-	# age-time interactions
-	for(a in 1:N_age_groups){
-	  gamma[a, 1] <- 0
-	  for(t in 2:N_year){
-	    # the difference between timesteps is beta_age * time (where timestep length is 1 year)
-	    gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], tau_gamma)
-	  }
-	}
-	sigma_gamma ~ dunif(0,2)
-	tau_gamma <- pow(sigma_gamma,-2)
-	
+  # age-LSOA interactions
+  for(a in 1:N_age_groups){
+    for(j in 1:N_LSOA){
+      xi[a, j] ~ dnorm(alpha_age[a] + alpha_v[j], sd = sigma_xi) # centred on age + LSOA term
+    }
+  }
+  sigma_xi ~ dunif(0,2)
+  
+  # LSOA-time interactions
+  for(j in 1:N_LSOA){
+    nu[j, 1] <- 0
+    for(t in 2:N_year){
+      # the difference between timesteps is beta_v * time (where timestep length is 1 year)
+      nu[j, t] ~ dnorm(nu[j, t-1] + beta_v[j], sd = sigma_nu) # beta_v incorporates beta term
+    }
+  }
+  sigma_nu ~ dunif(0,2)
+  
+  # age-time interactions
+  for(a in 1:N_age_groups){
+    gamma[a, 1] <- 0
+    for(t in 2:N_year){
+      # the difference between timesteps is beta_age * time (where timestep length is 1 year)
+      gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
+    }
+  }
+  sigma_gamma ~ dunif(0,2)
+  
   # Put all parameters together into indexed lograte with age-LSOA-time overdispersion term
-	for(a in 1:N_age_groups){
+  for(a in 1:N_age_groups){
     for(j in 1:N_LSOA){
       for(t in 1:N_year){
-		    lograte[a, j, t] <- xi[a, j] + nu[j, t] + gamma[a, t]
+        lograte[a, j, t] <- xi[a, j] + nu[j, t] + gamma[a, t]
       }
     }
-	}
+  }
 
   # LIKELIHOOD
   # N total number of cells, i.e. ages*years*areas(*sex)
@@ -202,7 +194,7 @@ monitors2 <- c("alpha0", "beta0",
 # 1. MCMC Configuration -- can be customised with different samplers
 mcmcConf <- configureMCMC(model = Cmodel,
                           monitors = monitors, monitors2 = monitors2,
-                          thin = 5, thin2 = 250, print = TRUE) # input the R model
+                          thin = 1, thin2 = 100, print = TRUE) # input the R model
 
 # 2. Build and compile the MCMC
 Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
