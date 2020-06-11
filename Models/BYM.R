@@ -16,7 +16,7 @@ library(spdep)
 library(RCurl)
 library(dplyr)
 library(nimble)
-library(igraph)
+library(lme4)
 
 set.seed(1)
 
@@ -46,6 +46,26 @@ row.names(shapefile@data) <- shapefile@data$LSOA.id
 W.nb <- poly2nb(shapefile, row.names = rownames(shapefile@data))
 nbInfo <- nb2WB(W.nb)
 # adj = nbInfo$adj, weights = nbInfo$weights, num = nbInfo$num
+
+# ----- INITIAL VALUES -----
+# Get good initial values to avoid long burn ins.
+# model with only age intercepts, LSOA intercepts and LSOA slopes
+mod <- glmer(deaths ~ offset(log(population)) + LSOA.id + (1|age_group.id) + (1 + YEAR.id|LSOA.id), family = "poisson", data = subset(mortality_m, population > 0))
+
+fixed <- coef(summary(mod))[, "Estimate"] # fixed effects
+intercept <- fixed[1]
+slope <- fixed[2]
+
+bin <- ranef(mod)$LSOA.id
+lsoa_int_inits <- bin$"(Intercept)"
+lsoa_slope_inits <- bin$YEAR.id
+
+bin <- ranef(mod)$age_group.id
+age_inits <- bin$"(Intercept)"
+
+initial <- list(intercept, slope, lsoa_int_inits, lsoa_slope_inits, age_inits)
+names(initial) <- c("global.intercept", "global.slope", "lsoa.intercepts", "lsoa.slopes", "age.intercepts")
+
 
 # Dimensions (Hammersmith and Fulham unit test second value):
 # - age -- 19 (0, 1-4, 5-10, ..., 80-84, 85+)
@@ -158,12 +178,12 @@ data <- list(y = mortality_m$deaths,
 
 # Initial values for uninformative priors (top-level nodes)
 # mu, lograte, alpha_age, beta_age not initialised
-inits <- list(alpha0 = -5.5, beta0 = 0.2,
-              alpha_u = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
-              beta_u = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
+inits <- list(alpha0 = initial$global.intercept,
+			        beta0 = initial$global.slope,
+			        alpha_u = initial$lsoa.intercepts,
+			        beta_u = initial$lsoa.slopes,
+			        alpha_age = initial$age.intercepts,
               sigma_alpha_u = 0.1, sigma_beta_u = 0.1,
-              alpha_v = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
-              beta_v = sample(c(-0.1, 0.1), constants$N_LSOA, replace = TRUE),
               sigma_alpha_v = 0.1, sigma_beta_v = 0.1,
               sigma_alpha_age = 0.75, sigma_beta_age = 0.015,
               sigma_xi = 0.08, sigma_nu = 0.1,

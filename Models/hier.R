@@ -18,7 +18,7 @@
 library(RCurl)
 library(dplyr)
 library(nimble)
-library(igraph)
+library(lme4)
 
 set.seed(1)
 
@@ -43,6 +43,25 @@ grid.lookup.MSOA <- mortality_m %>% # lookup correct LAD for that MSOA
   distinct() %>%
   arrange(MSOA.id) # arrange ascending so matches loop order
 grid.lookup.MSOA <- as.matrix(grid.lookup.MSOA) # grid.lookup[j, 2] for LAD
+
+# ----- INITIAL VALUES -----
+# Get good initial values to avoid long burn ins.
+# model with only age intercepts, LSOA intercepts and LSOA slopes
+mod <- glmer(deaths ~ offset(log(population)) + LSOA.id + (1|age_group.id) + (1 + YEAR.id|LSOA.id), family = "poisson", data = subset(mortality_m, population > 0))
+
+fixed <- coef(summary(mod))[, "Estimate"] # fixed effects
+intercept <- fixed[1]
+slope <- fixed[2]
+
+bin <- ranef(mod)$LSOA.id
+lsoa_int_inits <- bin$"(Intercept)"
+lsoa_slope_inits <- bin$YEAR.id
+
+bin <- ranef(mod)$age_group.id
+age_inits <- bin$"(Intercept)"
+
+initial <- list(intercept, slope, lsoa_int_inits, lsoa_slope_inits, age_inits)
+names(initial) <- c("global.intercept", "global.slope", "lsoa.intercepts", "lsoa.slopes", "age.intercepts")
 
 # Dimensions (Hammersmith and Fulham unit test second value):
 # - age -- 19 (0, 1-4, 5-10, ..., 80-84, 85+)
@@ -163,7 +182,11 @@ data <- list(y = mortality_m$deaths,
 
 # Initial values for uninformative priors (top-level nodes)
 # mu, lograte, alpha_age, beta_age not initialise
-inits <- list(alpha0 = -5.5, beta0 = 0.2,
+inits <- list(alpha0 = initial$global.intercept,
+			  beta0 = initial$global.slope,
+			  alpha_LSOA = initial$lsoa.intercepts,
+			  beta_LSOA = initial$lsoa.slopes,
+			  alpha_age = initial$age.intercepts,
               sigma_alpha_MSOA = 0.1, sigma_beta_MSOA = 0.1,
               sigma_alpha_LSOA = 0.1, sigma_beta_LSOA = 0.1,
               sigma_alpha_LAD = 0.1, sigma_beta_LAD = 0.1,
