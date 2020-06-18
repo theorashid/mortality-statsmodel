@@ -199,22 +199,25 @@ Cmodel <- compileNimble(model)
 
 # ----- MCMC INTEGRATION -----
 # Monitors
-# NIMBLE default only monitors top-level nodes
-# Monitor death rate per person with no thinning
+# Monitor the death rate per person to avoid 0 population issues
 monitors <- c("lograte")
-# Other monitors to check covergence, with some thinning
-monitors2 <- c("alpha0", "beta0",
-               "sigma_alpha_u", "sigma_beta_u",
-               "sigma_alpha_v", "sigma_beta_v",
-               "sigma_alpha_age", "sigma_beta_age",
-               "sigma_xi", "sigma_nu",
-               "sigma_gamma", "r")
+# Hyperparameter monitors to check covergence, with some thinning
+sigmas <- c("sigma_alpha_u", "sigma_beta_u", "sigma_alpha_v",
+            "sigma_beta_v", "sigma_alpha_age", "sigma_beta_age",
+            "sigma_xi", "sigma_nu", "sigma_gamma")
+monitors2 <- c("alpha0", "beta0", "r", sigmas)
 
 # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
 # 1. MCMC Configuration -- can be customised with different samplers
 mcmcConf <- configureMCMC(model = Cmodel,
                           monitors = monitors, monitors2 = monitors2,
-                          thin = 1, thin2 = 100, print = TRUE) # input the R model
+                          thin = 10, thin2 = 100, print = TRUE) # input the R model
+
+# sample standard deviations on log scale
+mcmcConf$removeSamplers(sigmas)
+for (s in sigmas) {
+  mcmcConf$addSampler(target = s, type = "RW", control = list(log = TRUE))
+}
 
 # 2. Build and compile the MCMC
 Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
