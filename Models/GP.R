@@ -129,7 +129,7 @@ code <- nimbleCode({
     # age-LSOA interactions
     for(a in 1:N_age_groups){
         for(j in 1:N_LSOA){
-            xi[a, j] ~ dnorm(alpha_age[a] + alpha_LSOA[j], sd = sigma_xi) # centred on age + LSOA + common term
+            xi[a, j] ~ dnorm(alpha_age[a] + alpha_LSOA[j], sd = sigma_xi) # centred on age + LSOA
         }
     }
     sigma_xi ~ dunif(0,2)
