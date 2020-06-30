@@ -66,7 +66,6 @@ age_inits <- bin$"(Intercept)"
 initial <- list(intercept, slope, lsoa_int_inits, lsoa_slope_inits, age_inits)
 names(initial) <- c("global.intercept", "global.slope", "lsoa.intercepts", "lsoa.slopes", "age.intercepts")
 
-
 # Dimensions (Hammersmith and Fulham unit test second value):
 # - age -- 19 (0, 1-4, 5-10, ..., 80-84, 85+)
 # - LAD -- 33 or 1
