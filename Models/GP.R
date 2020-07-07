@@ -67,7 +67,7 @@ maternKernel <- nimbleFunction(
 # ----- INITIAL VALUES -----
 # Get good initial values to avoid long burn ins.
 # model with only age intercepts, LSOA intercepts and LSOA slopes
-mod <- glmer(deaths ~ offset(log(population)) + LSOA.id + (1|age_group.id) + (1 + YEAR.id|LSOA.id), family = "poisson", data = subset(mortality_m, population > 0))
+mod <- glmer(deaths ~ offset(log(population)) + YEAR.id + (1|age_group.id) + (1 + YEAR.id|LSOA.id), family = "poisson", data = subset(mortality_m, population > 0))
 
 fixed <- coef(summary(mod))[, "Estimate"] # fixed effects
 intercept <- fixed[1]
