@@ -1,0 +1,100 @@
+
+model{
+# Theo AO Rashid -- October 2020
+
+# ----- BYM model -----
+# Negative binomial likelihood
+#
+# Global terms (normal prior) +
+# BYM for each space +
+# Age effects (random walk prior) +
+# Age-space interaction (normal prior) +
+# Global random walk
+# --------------------
+
+# PRIORS
+
+# COMMON TERMS
+alpha0 ~ dnorm(0, 0.00001)
+beta0  ~ dnorm(0, 0.00001)
+
+# AREA TERMS -- BYM priors
+# No hierarchy
+# Structured intercept and slope with a CAR prior
+alpha_u[1:N_space] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_alpha_u, zero_mean = 0)
+beta_u[1:N_space]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_beta_u, zero_mean = 0)
+# Unstructured IID intercept and slope
+for(s in 1:N_space) {
+  alpha_v[s] ~ dnorm(alpha0 + alpha_u[s], sd = sigma_alpha_v) # centred on common + CAR term
+  beta_v[s]  ~ dnorm(beta0 + beta_u[s], sd = sigma_beta_v)
+}
+sigma_alpha_u ~ dunif(0,2)
+tau_alpha_u <- pow(sigma_alpha_u,-2)
+sigma_beta_u ~ dunif(0,2)
+tau_beta_u <- pow(sigma_beta_u,-2)
+sigma_alpha_v ~ dunif(0,2)
+sigma_beta_v ~ dunif(0,2)
+
+# AGE TERMS
+alpha_age[1] <- 0 # initialise first terms for RW
+beta_age[1]  <- 0
+for(a in 2:N_age_groups) {
+  alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
+  beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
+}
+sigma_alpha_age ~ dunif(0,2)
+sigma_beta_age ~ dunif(0,2)
+
+# INTERACTIONS
+# age-space interactions
+for(a in 1:N_age_groups) {
+  for(s in 1:N_space) {
+    xi[a, s] ~ dnorm(alpha_age[a] + alpha_v[s], sd = sigma_xi) # centred on age + space term
+  }
+}
+sigma_xi ~ dunif(0,2)
+
+# space slope (as no space-time random walk)
+for(s in 1:N_space){
+  space_slope[s, 1] <- 0
+  for(t in 2:N_year) {
+    space_slope[s, t] <- space_slope[s, t-1] + beta_v[s]
+  }
+}
+
+# age slope (as no age-time random walk)
+for(a in 1:N_age_groups){
+  age_slope[a, 1] <- 0
+  for(t in 2:N_year) {
+    age_slope[a, t] <- age_slope[a, t-1] + beta_age[a]
+  }
+}
+
+# global random walk for non-linear time
+pi[1] <- 0
+for (t in 2:N_year) {
+  pi[t] ~ dnorm(pi[t-1], sd = sigma_pi)
+}
+sigma_pi ~ dunif(0, 2)
+
+# Put all parameters together into indexed lograte term
+for(a in 1:N_age_groups) {
+  for(s in 1:N_space) {
+    for(t in 1:N_year) {
+      lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + age_slope[a, t] + pi[t]
+    }
+  }
+}
+
+# LIKELIHOOD
+# N total number of cells, i.e. ages*years*areas(*sex)
+for (i in 1:N) {
+  # y is number of deaths in that cell
+  # mu is predicted number of deaths in that cell
+  y[i] ~ dnegbin(p[i], r)
+  p[i] <- r/(r + mu[i])
+  log(mu[i]) <- log(n[i]) + lograte[age[i], space[i], yr[i]]
+}
+r ~ dunif(0,50)
+}
+
