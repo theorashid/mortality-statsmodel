@@ -26,8 +26,7 @@ suppressPackageStartupMessages({
   library(nimble)
 })
 
-source(paste0("/rds/general/user/tar15/home/mortality-statsmodel/Models/parametric/",
-              "path_info.R"))
+source(paste0("path_info.R"))
 source(paste0(model_path, "prepare_model.R"))
 source(paste0(model_path, "nimble_model.R"))
 

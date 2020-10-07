@@ -1,3 +1,3 @@
-data_path    <- "/rds/general/user/tar15/home/mortality-statsmodel/Data/"
-model_path   <- "/rds/general/user/tar15/home/mortality-statsmodel/Models/parametric/"
-output_path  <- "/rds/general/user/tar15/home/mortality-statsmodel/Output/"
+data_path    <- "/mortality-statsmodel/Data/"
+model_path   <- "/mortality-statsmodel/Models/parametric/"
+output_path  <- "/mortality-statsmodel/Output/"
