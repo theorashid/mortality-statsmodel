@@ -5,9 +5,16 @@ library(dplyr)
 library(reshape2)
 library(rstan)
 library(ggplot2)
+library(foreach)
+library(doParallel)
 
-source(paste0("/rds/general/user/tar15/home/mortality-statsmodel/Models/parametric/",
+source(paste0("/../Models/parametric/",
               "path_info.R"))
+
+print(paste0("AVAILABLE CORES = ", detectCores()))
+# numCores <- detectCores()
+numCores <- 8
+doParallel::registerDoParallel(cores = numCores)
 
 # ----- IMPORT DATA -----
 region <- "LSOA"
@@ -47,15 +54,37 @@ names_hyps   <- colnames(chain_output[[1]]$samples2)
 # convert to rstan sims format
 # list, one for each parameter, rows are each iteration of MCMC, column for each chain
 print("----- REORGANISE MORTALITY -----")
-mr <- list()
-for (i in 1:n_params) {
-  par_mat <- matrix(, nrow = n_samples, ncol = n_chains)
-  for(c in 1:n_chains) {
-    par_mat[, c] <- chain_output[[c]]$samples[,i]
+
+#' regorganises from nimble output to stan-like output for analysis
+reorganise_mortality <- function(chain_output, params_vec, n_samples, n_chains) {
+  mr <- list()
+  for (i in params_vec) {
+    par_mat <- matrix(, nrow = n_samples, ncol = n_chains)
+    for(c in 1:n_chains) {
+      par_mat[, c] <- chain_output[[c]]$samples[,i]
+    }
+    name <- names_params[i]
+    mr[[name]] <- par_mat
   }
-  name <- names_params[i]
-  mr[[name]] <- par_mat
+  return(mr)
 }
+
+# split the matrix process over many nodes
+chunk_size <- 100
+tmp <- split(1:n_params, ceiling(seq_along(1:n_params)/chunk_size))
+print(
+  system.time({
+    mr <- foreach(params_vec = tmp) %dopar% {
+      reorganise_mortality(
+        chain_output = chain_output,
+        params_vec = params_vec,
+        n_samples = n_samples,
+        n_chains = n_chains
+      )
+    }
+    mr <- unlist(mr, recursive = FALSE)
+  })
+)
 
 # Convergence and efficiency diagnostics (https://mc-stan.org/rstan/reference/Rhat.html)
 # 1. R-hat
@@ -63,7 +92,13 @@ for (i in 1:n_params) {
 # If chains have not mixed well (ie, the between- and within-chain estimates don't agree),
 # R-hat is larger than 1. Need R-hat < 1.05.
 print("----- R-HAT -----")
-rhats <- lapply(mr, Rhat)
+print(
+  system.time(
+    rhats <- foreach(i = mr, .combine = "c") %dopar% {
+      Rhat(i)
+    }
+  )
+)
 
 if (!test) {
   png(file = paste0(output_path, "convergence/", region, model, sex, "_rhat.png"),
@@ -72,7 +107,7 @@ if (!test) {
   png(file = paste0(output_path, "convergence/", region, model, sex, "_T", "_rhat.png"),
       width = 600, height = 350)
 }
-hist(as.numeric(unlist(rhats)), col = rgb(0, 0.545, 0.545, 0.7), xlab = "R-hat statistic", main = "")
+hist(rhats, col = rgb(0, 0.545, 0.545, 0.7), xlab = "R-hat statistic", main = "")
 dev.off()
 
 print("R-hat range: ")
@@ -82,7 +117,14 @@ print(range(rhats))
 # Bulk-ESS is useful measure for sampling efficiency in the bulk of the distribution
 # (related e.g. to efficiency of mean and median estimates)
 print("----- BULK-ESS -----")
-ess_bulks <- lapply(mr, ess_bulk)
+print(
+  system.time(
+    ess_bulks <- foreach(i = mr, .combine = "c") %dopar% {
+      ess_bulk(i)
+    }
+  )
+)
+
 if (!test) {
   png(file = paste0(output_path, "convergence/", region, model, sex, "_ess_bulk.png"),
       width = 600, height = 350)
@@ -90,7 +132,7 @@ if (!test) {
   png(file = paste0(output_path, "convergence/", region, model, sex, "_T", "_ess_bulk.png"),
       width = 600, height = 350)
 }
-hist(as.numeric(unlist(ess_bulks)), col = rgb(0.69, 0.769, 0.871, 0.7), xlab = "ess-bulk", main = "")
+hist(ess_bulks, col = rgb(0.69, 0.769, 0.871, 0.7), xlab = "ess-bulk", main = "")
 dev.off()
 
 print("ess-bulk range: ")
@@ -99,7 +141,14 @@ print(range(ess_bulks))
 # The ess_tail function produces computes the minimum of effective sample sizes for 5%
 # and 95% quantiles (related e.g. to efficiency of variance and tail quantile estimates).
 print("----- TAIL-ESS -----")
-ess_tails <- lapply(mr, ess_tail)
+print(
+  system.time(
+    ess_tails <- foreach(i = mr, .combine = "c") %dopar% {
+      ess_tail(i)
+    }
+  )
+)
+
 if (!test) {
   png(file = paste0(output_path, "convergence/", region, model, sex, "_ess_tail.png"),
       width = 600, height = 350)
@@ -107,7 +156,7 @@ if (!test) {
   png(file = paste0(output_path, "convergence/", region, model, sex, "_T", "_ess_tail.png"),
       width = 600, height = 350)
 }
-hist(as.numeric(unlist(ess_tails)), col = rgb(0.439, 0.502, 0.565, 0.7), xlab = "ess-tail statistic", main = "")
+hist(ess_tails, col = rgb(0.439, 0.502, 0.565, 0.7), xlab = "ess-tail statistic", main = "")
 dev.off()
 
 print("ess-tail range: ")

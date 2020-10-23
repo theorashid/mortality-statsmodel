@@ -8,7 +8,7 @@ library(dplyr)
 library(foreach)
 library(doParallel)
 
-source(paste0("/rds/general/user/tar15/home/mortality-statsmodel/Models/parametric/",
+source(paste0("/../Models/parametric/",
               "path_info.R"))
 source(paste0(output_path, "analysis_utils.R"))
 source(paste0(output_path, "period_life_table.R"))
