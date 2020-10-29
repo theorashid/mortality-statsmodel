@@ -6,10 +6,6 @@ library(reshape2)
 library(rstan)
 library(ggplot2)
 library(foreach)
-library(doParallel)
-
-source(paste0("/../Models/parametric/",
-              "path_info.R"))
 
 print(paste0("AVAILABLE CORES = ", detectCores()))
 # numCores <- detectCores()
@@ -24,13 +20,15 @@ test   <- TRUE
 
 print("----- LOADING DATA... -----")
 if (!test) {
-  chain_output <- readRDS(paste0(output_path, "mcmc_output/",
-                                 region, model, sex,
-                                 "_mcmc_out.rds"))
+  chain_output <- readRDS(
+    here::here("Output", "mcmc_output", 
+    paste0(region, model, sex, "_mcmc_out.rds"))
+  )
 } else {
-  chain_output <- readRDS(paste0(output_path, "mcmc_output/",
-                                 region, model, sex,
-                                 "_T", "_mcmc_out.rds"))
+  chain_output <- readRDS(
+    here::here("Output", "mcmc_output", 
+    paste0(region, model, sex, "_T", "_mcmc_out.rds"))
+  )
 }
 
 n_chains   <- length(chain_output)
@@ -101,11 +99,17 @@ print(
 )
 
 if (!test) {
-  png(file = paste0(output_path, "convergence/", region, model, sex, "_rhat.png"),
-      width = 600, height = 350)
+  png(
+    file = here::here("Output", "convergence", 
+    paste0(region, model, sex, "_rhat.png")),
+    width = 600, height = 350
+    )
 } else {
-  png(file = paste0(output_path, "convergence/", region, model, sex, "_T", "_rhat.png"),
-      width = 600, height = 350)
+  png(
+    file = here::here("Output", "convergence", 
+    paste0(region, model, sex, "_T", "_rhat.png")),
+    width = 600, height = 350
+  )
 }
 hist(rhats, col = rgb(0, 0.545, 0.545, 0.7), xlab = "R-hat statistic", main = "")
 dev.off()
@@ -126,11 +130,17 @@ print(
 )
 
 if (!test) {
-  png(file = paste0(output_path, "convergence/", region, model, sex, "_ess_bulk.png"),
-      width = 600, height = 350)
+  png(
+    file = here::here("Output", "convergence", 
+    paste0(region, model, sex, "_ess_bulk.png")),
+    width = 600, height = 350
+    )
 } else {
-  png(file = paste0(output_path, "convergence/", region, model, sex, "_T", "_ess_bulk.png"),
-      width = 600, height = 350)
+  png(
+    file = here::here("Output", "convergence", 
+    paste0(region, model, sex, "_T", "_ess_bulk.png")),
+    width = 600, height = 350
+  )
 }
 hist(ess_bulks, col = rgb(0.69, 0.769, 0.871, 0.7), xlab = "ess-bulk", main = "")
 dev.off()
@@ -150,11 +160,17 @@ print(
 )
 
 if (!test) {
-  png(file = paste0(output_path, "convergence/", region, model, sex, "_ess_tail.png"),
-      width = 600, height = 350)
+  png(
+    file = here::here("Output", "convergence", 
+    paste0(region, model, sex, "_ess_tail.png")),
+    width = 600, height = 350
+    )
 } else {
-  png(file = paste0(output_path, "convergence/", region, model, sex, "_T", "_ess_tail.png"),
-      width = 600, height = 350)
+  png(
+    file = here::here("Output", "convergence", 
+    paste0(region, model, sex, "_T", "_ess_tail.png")),
+    width = 600, height = 350
+  )
 }
 hist(ess_tails, col = rgb(0.439, 0.502, 0.565, 0.7), xlab = "ess-tail statistic", main = "")
 dev.off()
@@ -186,7 +202,11 @@ p <- traces %>%
   labs(x = "", y = "") +
   theme(legend.position = "none", text = element_text(size = 6)) + 
   facet_wrap( ~ name, ncol = 10)
-ggsave(paste0(output_path, "convergence/", region, model, sex, "_mr_trace.png"), p, scale = 4)
+ggsave(
+  here::here("Output", "convergence", 
+  paste0(region, model, sex, "_T", "_mr_trace.png")),
+  p, scale = 4
+)
 
 # ----- HYPERPARAMETERS -----
 hyp <- list()
@@ -223,5 +243,8 @@ p <- traces %>%
   labs(x = "", y = "") +
   theme(legend.position = "none", text = element_text(size = 8)) + 
   facet_wrap( ~ name, ncol = 8)
-ggsave(paste0(output_path, "convergence/", region, model, sex, "_hyp_trace.png"), p, scale = 3)
-
+ggsave(
+  here::here("Output", "convergence", 
+  paste0(region, model, sex, "_T", "_hyp_trace.png")),
+  p, scale = 4
+)

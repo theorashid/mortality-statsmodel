@@ -9,13 +9,11 @@
 library(dplyr)
 library(lme4)
 
-source(paste0("/rds/general/user/tar15/home/mortality-statsmodel/Models/parametric/",
-              "path_info.R"))
-source(paste0(model_path, "prepare_model.R"))
+source(here::here("Models", "parametric", "prepare_model.R"))
 
 region <- "LSOA"
 sex    <- 1
-test   <- FALSE
+
 mortality <- load_data(data_path, region = region, sex = sex, test = FALSE)
 
 # model with only age intercepts, MSOA/LSOA intercepts and MSOA/LSOA slopes
@@ -51,9 +49,12 @@ names(inits) <- c("global.intercept", "global.slope", "space.intercepts",
                   "space.slopes", "age.intercepts")
 
 if (!test) {
-  saveRDS(inits, file = paste0(data_path, "Inits/",
-                               region, sex,
-                               "_inits.rds"))
+  saveRDS(
+    inits,
+    file = here::here(
+      "Data", "Inits", paste0(region, sex, "_inits.rds")
+    )
+  )
 } else {
   if (region == "MSOA") {
     sub <- mortality %>% filter(GOR2011 == "E12000007")
@@ -70,8 +71,11 @@ if (!test) {
   }
   names(inits_sub) <- c("global.intercept", "global.slope", "space.intercepts",
                         "space.slopes", "age.intercepts")
-  
-  saveRDS(inits_sub, file = paste0(data_path, "Inits/",
-                                   region, sex,
-                                   "_T", "_inits.rds"))
+                        
+  saveRDS(
+    inits_sub,
+    file = here::here(
+      "Data", "Inits", paste0(region, sex, "_T", "_inits.rds")
+    )
+  )
 }

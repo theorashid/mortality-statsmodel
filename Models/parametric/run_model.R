@@ -26,9 +26,8 @@ suppressPackageStartupMessages({
   library(nimble)
 })
 
-source(paste0("path_info.R"))
-source(paste0(model_path, "prepare_model.R"))
-source(paste0(model_path, "nimble_model.R"))
+source(here::here("Models", "parametric", "prepare_model.R"))
+source(here::here("Models", "parametric", "nimble_model.R"))
 
 # test parameters for running interactively
 # args <- list("LSOA", "BYM", "1", TRUE, "100", "10", "1", "2", "10")
@@ -37,8 +36,12 @@ source(paste0(model_path, "nimble_model.R"))
 #                     "thin_mort", "thin_param")
 
 # ----- IMPORT MORTALITY DATA -----
-mortality <- load_data(data_path, region = args$region, 
-                       sex = as.numeric(args$sex), test = args$test)
+mortality <- load_data(
+  data_path = here::here("Data"),
+  region = args$region,
+  sex = as.numeric(args$sex),
+  test = args$test
+)
 
 # add ID columns, hier3 as lowest level of hierarchy
 if (args$region == "MSOA") {
@@ -53,17 +56,27 @@ if (args$region == "MSOA") {
 
 # ----- IMPORT INITIAL VALUES -----
 if (!args$test) {
-  initial <- readRDS(file = paste0(data_path, "Inits/", 
-                                   args$region, args$sex, "_inits.rds"))
+  initial <- readRDS(
+    file = here::here(
+      "Data", "Inits", paste0(args$region, args$sex, "_inits.rds")
+    )
+  )
 } else {
-  initial <- readRDS(file = paste0(data_path, "Inits/", 
-                                   args$region, args$sex, "_T", "_inits.rds"))
+  initial <- readRDS(
+    file = here::here(
+      "Data", "Inits", paste0(args$region, args$sex, "_T", "_inits.rds")
+    )
+  )
 }
 
 # ----- RUN MODEL PREPROCESSING ------
 # reduced adjacency matrix information for BYM
-model_inputs <- prep_model(data_path, mortality, 
-                           region = args$region, model = args$model)
+model_inputs <- prep_model(
+  data_path = here::here("Data"),
+  mortality = mortality, 
+  region = args$region, 
+  model = args$model
+)
 
 # ----- SET UP CLUSTER AND RUN -----
 if (as.numeric(args$num_chains) == 1) {
@@ -105,11 +118,19 @@ if (as.numeric(args$num_chains) == 1) {
 
 print("----- SAVING DATA... -----")
 if (!args$test) {
-  saveRDS(chain_output, file = paste0(output_path, "mcmc_output/",
-                                      args$region, args$model, args$sex,
-                                      "_mcmc_out.rds"))
+  saveRDS(
+    chain_output,
+    file = here::here(
+      "Output", "mcmc_output",
+      paste0(args$region, args$model, args$sex, "_mcmc_out.rds")
+    )
+  )
 } else {
-  saveRDS(chain_output, file = paste0(output_path, "mcmc_output/",
-                                      args$region, args$model, args$sex,
-                                      "_T", "_mcmc_out.rds"))
+  saveRDS(
+    chain_output,
+    file = here::here(
+      "Output", "mcmc_output",
+      paste0(args$region, args$model, args$sex, "_T", "_mcmc_out.rds")
+    )
+  )
 }

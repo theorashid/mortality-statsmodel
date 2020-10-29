@@ -6,13 +6,10 @@
 
 library(dplyr)
 library(foreach)
-library(doParallel)
 
-source(paste0("/../Models/parametric/",
-              "path_info.R"))
-source(paste0(output_path, "analysis_utils.R"))
-source(paste0(output_path, "period_life_table.R"))
-source(paste0(model_path, "prepare_model.R"))
+source(here::here("Output", "analysis_utils.R"))
+source(here::here("Output", "period_life_table.R"))
+source(here::here("Models", "parametric", "prepare_model.R"))
 
 set.seed(1)
 print(paste0("AVAILABLE CORES = ", detectCores()))
@@ -30,13 +27,15 @@ n_pd <- 1000 # number of posterior draws
 
 print("----- LOADING DATA... -----")
 if (!test) {
-  chain_output <- readRDS(paste0(output_path, "mcmc_output/",
-                                 region, model, sex,
-                                 "_mcmc_out.rds"))
+  chain_output <- readRDS(
+    here::here("Output", "mcmc_output",
+    paste0(region, model, sex, "_mcmc_out.rds"))
+  )
 } else {
-  chain_output <- readRDS(paste0(output_path, "mcmc_output/",
-                                 region, model, sex,
-                                 "_T", "_mcmc_out.rds"))
+  chain_output <- readRDS(
+    here::here("Output", "mcmc_output",
+    paste0(region, model, sex, "_T", "_mcmc_out.rds"))
+  )
 }
 
 # ----- SAMPLE MORTALITY -----
@@ -154,11 +153,15 @@ if (region == "MSOA") {
 
 paste0("----- SAVING LIFE EXPECTANCY SAMPLES -----")
 if (!test) {
-  write.csv(LE_df, paste0(output_path, "e0_samples/",
-                          region, model, sex,
-                          "_e0_samples.csv"))
+  write.csv(
+    LE_df,
+    here::here("Output", "e0_samples", 
+    paste0(region, model, sex, "_e0_samples.csv"))
+  )
 } else {
-  write.csv(LE_df, paste0(output_path, "e0_samples/",
-                          region, model, sex,
-                          "_T", "_e0_samples.csv"))
+  write.csv(
+    LE_df,
+    here::here("Output", "e0_samples", 
+    paste0(region, model, sex, "_T", "_e0_samples.csv"))
+  )
 }

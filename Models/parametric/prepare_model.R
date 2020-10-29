@@ -9,12 +9,12 @@ suppressPackageStartupMessages({
 load_data <- function(data_path, region, sex, test = FALSE) {
   if (region == "MSOA") {
     if(!test) {
-      mortality <- read.csv(file = paste0(data_path, "Mortality/",
+      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
                                           "mortality_eng_ac_", region, ".csv"))
       print(paste0("LOADED ENGLAND DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
     } else {
-      mortality <- read.csv(file = paste0(data_path, "Mortality/",
+      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
                                           "mortality_ldn_ac_", region, ".csv"))
       print(paste0("LOADED LONDON DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
@@ -31,12 +31,12 @@ load_data <- function(data_path, region, sex, test = FALSE) {
     mortality$YEAR.id <- mortality %>% group_indices(YEAR)
   } else if (region == "LSOA") {
     if(!test) {
-      mortality <- read.csv(file = paste0(data_path, "Mortality/",
+      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
                                           "mortality_ldn_ac_", region, ".csv"))
       print(paste0("LOADED LONDON DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
     } else {
-      mortality <- read.csv(file = paste0(data_path, "Mortality/",
+      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
                                           "mortality_hf_ac_", region, ".csv"))
       print(paste0("LOADED HAMMERSMITH AND FULHAM DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
@@ -65,12 +65,12 @@ prep_model <- function(data_path, mortality, region, model) {
   if (model == "BYM") {
     # Shape data for extent (not clipped) and merge with mortality
     if (region == "MSOA") {
-      sp <- topojson_read(paste0(data_path, "GIS/", "EW_", region, "2011_BFE.json"))
+      sp <- topojson_read(paste0(data_path, "/GIS/", "EW_", region, "2011_BFE.json"))
       sp <- as(sp, "Spatial")
       sp <- sp %>% rename(MSOA2011 = MSOA11CD)
       sp <- left_join(sp, distinct(select(mortality, MSOA2011, hier3.id)))
     } else if (region == "LSOA") {
-      sp <- topojson_read(paste0(data_path, "GIS/", "ldn_", region, "2011_BFE.json"))
+      sp <- topojson_read(paste0(data_path, "/GIS/", "ldn_", region, "2011_BFE.json"))
       sp <- as(sp, "Spatial")
       sp <- sp %>% rename(LSOA2011 = code)
       sp <- left_join(sp, distinct(select(mortality, LSOA2011, hier3.id)))
@@ -106,7 +106,7 @@ prep_model <- function(data_path, mortality, region, model) {
     return(list(grid.lookup, grid.lookup.s2))
   } else if (model == "GP") {
     # read in population-weighted centroids
-    locs <- read.csv(paste0(data_path, "GIS/", "EW_", region, "2011_popwcentroids.csv"))
+    locs <- read.csv(paste0(data_path, "/GIS/", "EW_", region, "2011_popwcentroids.csv"))
     if (region == "MSOA") {
       locs <- left_join(distinct(select(mortality, MSOA2011, hier3.id)), locs)
     } else if (region == "LSOA") {
