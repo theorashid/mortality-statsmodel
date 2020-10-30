@@ -48,34 +48,34 @@ inits <- list(intercept, slope, space_int_inits, space_slope_inits, age_inits)
 names(inits) <- c("global.intercept", "global.slope", "space.intercepts",
                   "space.slopes", "age.intercepts")
 
-if (!test) {
-  saveRDS(
-    inits,
-    file = here::here(
-      "Data", "Inits", paste0(region, sex, "_inits.rds")
-    )
+saveRDS(
+  inits,
+  file = here::here(
+    "Data", "Inits", paste0(region, sex, "_inits.rds")
   )
-} else {
-  if (region == "MSOA") {
-    sub <- mortality %>% filter(GOR2011 == "E12000007")
-    inits_sub <- list(intercept, slope, 
-                      space_int_inits[unique(sub$MSOA.id)], 
-                      space_slope_inits[unique(sub$MSOA.id)],
-                      age_inits)
-  } else if (region == "LSOA") {
-    sub <- mortality %>% filter(LAD2011 == "E09000013")
-    inits_sub <- list(intercept, slope, 
-                      space_int_inits[unique(sub$LSOA.id)], 
-                      space_slope_inits[unique(sub$LSOA.id)],
-                      age_inits)
-  }
-  names(inits_sub) <- c("global.intercept", "global.slope", "space.intercepts",
-                        "space.slopes", "age.intercepts")
-                        
-  saveRDS(
-    inits_sub,
-    file = here::here(
-      "Data", "Inits", paste0(region, sex, "_T", "_inits.rds")
-    )
-  )
+)
+
+if (region == "MSOA") {
+  sub <- mortality %>% filter(GOR2011 == "E12000007")
+  inits_sub <- list(intercept, slope, 
+                    space_int_inits[unique(sub$MSOA.id)], 
+                    space_slope_inits[unique(sub$MSOA.id)],
+                    age_inits)
+} else if (region == "LSOA") {
+  sub <- mortality %>% filter(LAD2011 == "E09000013")
+  inits_sub <- list(intercept, slope, 
+                    space_int_inits[unique(sub$LSOA.id)], 
+                    space_slope_inits[unique(sub$LSOA.id)],
+                    age_inits)
 }
+
+names(inits_sub) <- c("global.intercept", "global.slope", "space.intercepts",
+                      "space.slopes", "age.intercepts")
+                      
+saveRDS(
+  inits_sub,
+  file = here::here(
+    "Data", "Inits", paste0(region, sex, "_T", "_inits.rds")
+  )
+)
+
