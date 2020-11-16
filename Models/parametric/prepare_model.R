@@ -64,12 +64,12 @@ prep_model <- function(data_path, mortality, region, model) {
   if (model == "BYM") {
     # Shape data for extent (not clipped) and merge with mortality
     if (region == "MSOA") {
-      sp <- topojson_read(paste0(data_path, "/GIS/", "EW_", region, "2011_BFE.json"))
+      sp <- topojson_read(paste0(data_path, "/GIS/", "EW_", region, "2011_BFC.json"))
       sp <- as(sp, "Spatial")
       sp <- sp %>% rename(MSOA2011 = MSOA11CD)
       sp <- left_join(sp, distinct(select(mortality, MSOA2011, hier3.id)))
     } else if (region == "LSOA") {
-      sp <- topojson_read(paste0(data_path, "/GIS/", "ldn_", region, "2011_BFE.json"))
+      sp <- topojson_read(paste0(data_path, "/GIS/", "ldn_", region, "2011_BFC.json"))
       sp <- as(sp, "Spatial")
       sp <- sp %>% rename(LSOA2011 = code)
       sp <- left_join(sp, distinct(select(mortality, LSOA2011, hier3.id)))
