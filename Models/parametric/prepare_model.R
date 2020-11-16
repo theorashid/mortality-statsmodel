@@ -60,7 +60,6 @@ load_data <- function(data_path, region, sex, test = FALSE) {
 #'  Prepare inputs for:
 #'  - BYM model by matching shapedata to mortality data, output is reduced adjacency matrix
 #'  - nested model by producing lookup tables linking hier1 to hier2 and hier3 geographies
-#'  - GP model by returning distance matrix between population-weighted centroids
 prep_model <- function(data_path, mortality, region, model) {
   if (model == "BYM") {
     # Shape data for extent (not clipped) and merge with mortality
@@ -104,22 +103,5 @@ prep_model <- function(data_path, mortality, region, model) {
     grid.lookup.s2 <- as.matrix(grid.lookup.s2)
     print("----- LOOKUPS MADE -----")
     return(list(grid.lookup, grid.lookup.s2))
-  } else if (model == "GP") {
-    # read in population-weighted centroids
-    locs <- read.csv(paste0(data_path, "/GIS/", "EW_", region, "2011_popwcentroids.csv"))
-    if (region == "MSOA") {
-      locs <- left_join(distinct(select(mortality, MSOA2011, hier3.id)), locs)
-    } else if (region == "LSOA") {
-      locs <- left_join(distinct(select(mortality, LSOA2011, hier3.id)), locs)
-    } else stop("invalid region: MSOA or LSOA only")
-    
-    # calculate normalised distances betweeen centroids
-    locs <- locs %>% arrange(hier3.id)
-    dists <- as.matrix(dist(locs[,3:4]))
-    dists <- dists / max(dists) 
-    
-    print("----- CENTROIDS ADDED -----")
-    return(dists)
-  } else stop("invalid model name: BYM, nested or GP only")
-  
+  } else stop("invalid model name: BYM or nested only")
 } 

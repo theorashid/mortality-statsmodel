@@ -3,27 +3,9 @@ suppressPackageStartupMessages({
   library(nimble)
 })
 
-#' Matern kernel function defined as a nimbleFunction
-maternKernel <- nimbleFunction(     
-  run = function(dists = double(2), l = double(0), sigma = double(0)) {
-    returnType(double(2))
-    n <- dim(dists)[1]
-    result <- matrix(nrow = n, ncol = n, init = FALSE)
-    sigma2 <- sigma*sigma   # calculate once
-    l2 <- l*l
-    for(i in 1:n)
-      for(j in 1:n)
-        # if-then-else statement remove for speed
-        # comment out the required function (nu = 1/2, 3/2, 5/2)
-        # result[i, j] <- sigma2 * exp(-dists[i,j]/l)
-        # result[i, j] <- sigma2 * (1 + sqrt(3)*dists[i,j]/l) * exp(-sqrt(3)*dists[i,j]/l)
-        result[i, j] <- sigma2 * (1 + sqrt(5)*dists[i,j]/l + 5*dists[i,j]^2 / (3*l2)) * exp(-sqrt(5)*dists[i,j]/l)
-    return(result)
-  })
-
 #' function required to run the mcmc chains in parallel
 #' this will build a separate model on each core
-#' the function body contains the BYM, nested and GP models
+#' the function body contains the BYM and nested models
 run_MCMC_allcode <- function(seed,
                              model_name,
                              mortdata,
@@ -154,7 +136,6 @@ run_MCMC_allcode <- function(seed,
     
     specific_sigmas <- c("sigma_alpha_u", "sigma_beta_u",
                          "sigma_alpha_v", "sigma_beta_v")
-    specific_monitors2 <- c("alpha0", "beta0")
     
   } else if (model_name == "nested") {
     code <- nimbleCode({
@@ -286,115 +267,8 @@ run_MCMC_allcode <- function(seed,
     specific_sigmas <- c("sigma_alpha_s1", "sigma_beta_s1",
                          "sigma_alpha_s2", "sigma_beta_s2",
                          "sigma_alpha_s3", "sigma_beta_s3")
-    specific_monitors2 <- c("alpha0", "beta0")
     
-  } else if (model_name == "GP") {
-    code <- nimbleCode({
-      # Theo AO Rashid -- October 2020
-      
-      # ----- GP model -----
-      # Negative binomial likelihood
-      #
-      # Gaussian process over space +
-      # Age effects (random walk prior) +
-      # Age-space interaction (normal prior) +
-      # Global random walk
-      #
-      # Requires MaternKernel as a nimbleFunction
-      
-      # PRIORS
-      
-      # AREA TERMS
-      # GP for intercepts
-      mu_alpha[1:N_space] <- mu0_alpha*ones[1:N_space]
-      cov_alpha[1:N_space, 1:N_space] <- maternKernel(dists[1:N_space, 1:N_space], l_alpha, sigma_alpha)
-      alpha_space[1:N_space] ~ dmnorm(mu_alpha[1:N_space], cov = cov_alpha[1:N_space, 1:N_space])
-      mu0_alpha   ~ dnorm(0, sd = 100)
-      sigma_alpha ~ dunif(0, 2)
-      l_alpha     ~ dunif(0, 5)
-      
-      # GP for slopes
-      mu_beta[1:N_space] <- mu0_beta*ones[1:N_space]
-      cov_beta[1:N_space, 1:N_space] <- maternKernel(dists[1:N_space, 1:N_space], l_beta, sigma_beta)
-      beta_space[1:N_space] ~ dmnorm(mu_beta[1:N_space], cov = cov_beta[1:N_space, 1:N_space])
-      mu0_beta   ~ dnorm(0, sd = 100)
-      sigma_beta ~ dunif(0, 2)
-      l_beta     ~ dunif(0, 5)
-      # AGE TERMS
-      alpha_age[1] <- 0 # initialise first terms for RW
-      beta_age[1]  <- 0
-      for(a in 2:N_age_groups){
-        alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
-        beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
-      }
-      sigma_alpha_age ~ dunif(0,2)
-      sigma_beta_age ~ dunif(0,2)
-      
-      # INTERACTIONS
-      # age-space interactions
-      for(a in 1:N_age_groups) {
-        for(s in 1:N_space) {
-          xi[a, s] ~ dnorm(alpha_age[a] + alpha_space[s], sd = sigma_xi) # centred on age + space term
-        }
-      }
-      sigma_xi ~ dunif(0,2)
-      
-      # space slope (as no space-time random walk)
-      for(s in 1:N_space){
-        space_slope[s, 1] <- 0
-        for(t in 2:N_year) {
-          space_slope[s, t] <- space_slope[s, t-1] + beta_space[s]
-        }
-      }
-      
-      # age slope (as no age-time random walk)
-      for(a in 1:N_age_groups){
-        age_slope[a, 1] <- 0
-        for(t in 2:N_year) {
-          age_slope[a, t] <- age_slope[a, t-1] + beta_age[a]
-        }
-      }
-      
-      # global random walk for non-linear time
-      pi[1] <- 0
-      for (t in 2:N_year) {
-        pi[t] ~ dnorm(pi[t-1], sd = sigma_pi)
-      }
-      sigma_pi ~ dunif(0, 2)
-      
-      # Put all parameters together into indexed lograte
-      for(a in 1:N_age_groups) {
-        for(s in 1:N_space) {
-          for(t in 1:N_year) {
-            lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + age_slope[a, t] + pi[t]
-          }
-        }
-      }
-      
-      # LIKELIHOOD
-      # N total number of cells, i.e. ages*years*areas(*sex)
-      for (i in 1:N) {
-        # y is number of deaths in that cell
-        # mu is predicted number of deaths in that cell
-        y[i] ~ dnegbin(p[i], r)
-        p[i] <- r/(r + mu[i])
-        log(mu[i]) <- log(n[i]) + lograte[age[i], space[i], yr[i]]
-      }
-      r ~ dunif(0,50)
-    })
-    
-    specific_constants <- list(dists = inputs,
-                               ones = rep(1, max(mortdata$hier3.id)))
-    specific_inits <- list(mu0_alpha = init_vals$global.intercept,
-                           mu0_beta = init_vals$global.slope,
-                           sigma_alpha = 0.1, sigma_beta = 0.1,
-                           alpha_space = init_vals$space.intercepts + init_vals$global.intercept,
-                           beta_space = init_vals$space.slopes + init_vals$global.slope)
-      
-    specific_sigmas <- c("sigma_alpha", "sigma_beta")
-    specific_monitors2 <- c("mu0_alpha", "mu0_beta", "l_alpha", "l_beta")
-    
-  } else stop("BYM, nested or GP model names only")
+  } else stop("BYM or nested model names only")
   
   constants <- c(list(
     N = nrow(mortdata),
@@ -434,7 +308,7 @@ run_MCMC_allcode <- function(seed,
               "sigma_xi", "sigma_pi",
               specific_sigmas)
   monitors2 <- c("r", "alpha_age", "beta_age", 
-                 specific_monitors2, sigmas)
+                 "alpha0", "beta0", sigmas)
   
   # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
   # 1. MCMC Configuration -- can be customised with different samplers

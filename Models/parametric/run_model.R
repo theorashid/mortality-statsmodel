@@ -13,7 +13,7 @@ Options:
 
 Arguments:
     <region>        Spatial unit of interest (MSOA | LSOA).
-    <model>         Name of the model (BYM | nested | GP).
+    <model>         Name of the model (BYM | nested ).
     <sex>           Sex of the run (1 for male, 2 for female).
     <num_iter>      Number of iterations for the MCMC.
     <num_burn>      Number of burn in iterations for the MCMC.
@@ -96,9 +96,6 @@ if (as.numeric(args$num_chains) == 1) {
   this_cluster <- makeCluster(as.numeric(args$num_chains))
   print(this_cluster)
   print("----- RUNNING CHAINS -----")
-  if (args$model == "GP") {
-    clusterExport(this_cluster, c("maternKernel"))
-  }
   system.time(chain_output <- parLapply(cl = this_cluster,
                                         X = 1:as.numeric(args$num_chains),
                                         fun = run_MCMC_allcode,
