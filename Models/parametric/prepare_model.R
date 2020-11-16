@@ -83,6 +83,73 @@ prep_model <- function(data_path, mortality, region, model) {
     W.nb <- poly2nb(sp, row.names = sp$hier3.id)
     nbInfo <- nb2WB(W.nb)
     # adj = nbInfo$adj, weights = nbInfo$weights, num = nbInfo$num
+
+    if (region == "MSOA") {
+      print("correcting island to mainland for MSOA level")
+      # connect islands to the nearest MSOA (based on road/ferry connections)
+      # Isle of Wight, E02003592 -- E02004801
+      # Hayling Island, E02004776 -- E02004775
+      # Scilly Isles, E02006781 -- E02003950
+      # Canvey Island, E02004482 -- E02004479
+      islands   <- c("E02003592", "E02004776", "E02006781", "E02004482")
+      mainlands <- c("E02004801", "E02004775", "E02003950", "E02004479")
+
+      for (i in 1:length(islands)) {
+        print(islands[i])
+        tmp <- sp@data %>% filter(MSOA2011 == islands[i])
+        head <- tmp$hier3.id
+        tmp <- sp@data %>% filter(MSOA2011 == mainlands[i])
+        target <- tmp$hier3.id
+
+        # add connection from head to target
+        hier3 <- head
+
+        if (hier3 == 1) {
+          pre_id <- 0
+        } else {
+          pre_id <- sum(nbInfo$num[1:(hier3-1)])
+        }
+
+        nn <- nbInfo$num[hier3] # number of neighbours
+        if (nn > 0) {
+          id <- sum(nbInfo$num[1:hier3]) # end position on neighbours list
+          tmp <- nbInfo$adj[(pre_id+1):id] # neighbours list
+          # add target to neighbours list
+          tmp <- append(tmp, target)
+          tmp <- tmp[order(tmp)] # keep them in the right order
+          pos <- which(tmp %in% target)
+          nbInfo$adj <- append(nbInfo$adj, target, (pre_id+pos-1))
+          print(nbInfo$adj[(pre_id)])
+          print(nbInfo$adj[(pre_id+pos)])
+          nbInfo$num[hier3] <- nbInfo$num[hier3] + 1 # added one more neighbour
+          nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
+        } else { # Scilly isles has no neighbours
+          nbInfo$adj <- append(nbInfo$adj, target, pre_id)
+          nbInfo$num[hier3] <- nbInfo$num[hier3] + 1 # added one more neighbour
+          nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
+        }
+
+        # add connection back from target to head
+        hier3 <- target
+
+        if (hier3 == 1) {
+          pre_id <- 0
+        } else {
+          pre_id <- sum(nbInfo$num[1:(hier3-1)])
+        }
+
+        id <- sum(nbInfo$num[1:hier3]) # end position on neighbours list
+        tmp <- nbInfo$adj[(pre_id+1):id] # neighbours list
+
+        # add head to neighbours list
+        tmp <- append(tmp, head)
+        tmp <- tmp[order(tmp)] # keep them in the right order
+        pos <- which(tmp %in% head)
+
+        nbInfo$adj <- append(nbInfo$adj, head, (pre_id+pos-1))
+        nbInfo$num[hier3] <- nbInfo$num[hier3] + 1 # added one more neighbour
+        nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
+      }
     
     print("----- SHAPE DATA LOADED -----")
     return(nbInfo)
