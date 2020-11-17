@@ -150,7 +150,7 @@ prep_model <- function(data_path, mortality, region, model) {
         nbInfo$num[hier3] <- nbInfo$num[hier3] + 1 # added one more neighbour
         nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
       }
-    
+    }
     print("----- SHAPE DATA LOADED -----")
     return(nbInfo)
   } else if (model == "nested") {
