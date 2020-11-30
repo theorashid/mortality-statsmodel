@@ -34,7 +34,7 @@ run_MCMC_allcode <- function(seed,
       # BYM for each space +
       # Age effects (random walk prior) +
       # Age-space interaction (normal prior) +
-      # Global random walk
+      # Age random walk
       # --------------------
       
       # PRIORS
@@ -87,26 +87,21 @@ run_MCMC_allcode <- function(seed,
         }
       }
       
-      # age slope (as no age-time random walk)
+      # age-time random walk
       for(a in 1:N_age_groups){
-        age_slope[a, 1] <- 0
+        gamma[a, 1] <- 0
         for(t in 2:N_year) {
-          age_slope[a, t] <- age_slope[a, t-1] + beta_age[a]
+          gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
         }
       }
-      
-      # global random walk for non-linear time
-      pi[1] <- 0
-      for (t in 2:N_year) {
-        pi[t] ~ dnorm(pi[t-1], sd = sigma_pi)
-      }
-      sigma_pi ~ dunif(0, 2)
+      sigma_gamma ~ dunif(0,2)
+
       
       # Put all parameters together into indexed lograte term
       for(a in 1:N_age_groups) {
         for(s in 1:N_space) {
           for(t in 1:N_year) {
-            lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + age_slope[a, t] + pi[t]
+            lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + gamma[a, t]
           }
         }
       }
@@ -151,7 +146,7 @@ run_MCMC_allcode <- function(seed,
       # Random effects for tier 3 (smallest) (normal prior, hierarchy) +
       # Age effects (random walk prior) +
       # Age-space interaction (normal prior) +
-      # Global random walk
+      # Age random walk
       #
       # Designed for the ONS hierarchy LSOA -> MSOA -> LAD / MSOA -> LAD -> Region (3 -> 2 -> 1)
       # --------------------
@@ -216,26 +211,20 @@ run_MCMC_allcode <- function(seed,
         }
       }
       
-      # age slope (as no age-time random walk)
+      # age-time random walk
       for(a in 1:N_age_groups){
-        age_slope[a, 1] <- 0
+        gamma[a, 1] <- 0
         for(t in 2:N_year) {
-          age_slope[a, t] <- age_slope[a, t-1] + beta_age[a]
+          gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
         }
       }
-      
-      # global random walk for non-linear time
-      pi[1] <- 0
-      for (t in 2:N_year) {
-        pi[t] ~ dnorm(pi[t-1], sd = sigma_pi)
-      }
-      sigma_pi ~ dunif(0, 2)
+      sigma_gamma ~ dunif(0,2)
       
       # Put all parameters together into indexed lograte term
       for(a in 1:N_age_groups) {
         for(s in 1:N_space) {
           for(t in 1:N_year) {
-            lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + age_slope[a, t] + pi[t]
+            lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + gamma[a, t]
           }
         }
       }
@@ -283,7 +272,7 @@ run_MCMC_allcode <- function(seed,
   inits <- c(list(
     alpha_age = init_vals$age.intercepts,
     sigma_alpha_age = 0.75, sigma_beta_age = 0.015,
-    sigma_xi = 0.08, sigma_pi = 0.1, r = 20.0
+    sigma_xi = 0.08, sigma_gamma = 0.1, r = 20.0
   ), specific_inits)
   
   data <- list(y = mortdata$deaths,
@@ -305,7 +294,7 @@ run_MCMC_allcode <- function(seed,
   
   # Hyperparameter monitors to check covergence, with some thinning
   sigmas <- c("sigma_alpha_age", "sigma_beta_age",
-              "sigma_xi", "sigma_pi",
+              "sigma_xi", "sigma_gamma",
               specific_sigmas)
   monitors2 <- c("r", "alpha_age", "beta_age", 
                  "alpha0", "beta0", sigmas)
