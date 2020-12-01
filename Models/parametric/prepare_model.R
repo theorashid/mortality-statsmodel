@@ -25,7 +25,7 @@ load_data <- function(data_path, region, sex, test = FALSE) {
       select(-sex) %>%
       arrange(MSOA2011, YEAR, age_group)
     mortality$GOR.id <- mortality %>% group_indices(GOR2011)
-    mortality$LAD.id <- mortality %>% group_indices(LAD2011)
+    mortality$LAD.id <- mortality %>% group_indices(LAD2020)
     mortality$MSOA.id <- mortality %>% group_indices(MSOA2011)
     mortality$age_group.id <- mortality %>% group_indices(age_group)
     mortality$YEAR.id <- mortality %>% group_indices(YEAR)
@@ -47,7 +47,7 @@ load_data <- function(data_path, region, sex, test = FALSE) {
       select(-sex) %>%
       arrange(LSOA2011, YEAR, age_group)
     mortality$GOR.id <- mortality %>% group_indices(GOR2011)
-    mortality$LAD.id <- mortality %>% group_indices(LAD2011)
+    mortality$LAD.id <- mortality %>% group_indices(LAD2020)
     mortality$MSOA.id <- mortality %>% group_indices(MSOA2011)
     mortality$LSOA.id <- mortality %>% group_indices(LSOA2011)
     mortality$age_group.id <- mortality %>% group_indices(age_group)
