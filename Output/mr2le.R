@@ -135,7 +135,7 @@ if (region == "MSOA") {
   strata <- strata %>%
     select(
       MSOA.id, YEAR.id,
-      MSOA2011, LAD2011, GOR2011, YEAR) %>%
+      MSOA2011, LAD2020, GOR2011, YEAR) %>%
     distinct()
   strata$hier3.id <- strata$MSOA.id
   LE_df <- left_join(strata, LE_df) %>%
@@ -144,7 +144,7 @@ if (region == "MSOA") {
   strata <- strata %>%
     select(
       LSOA.id, YEAR.id,
-      LSOA2011, MSOA2011, LAD2011, GOR2011, YEAR) %>%
+      LSOA2011, MSOA2011, LAD2020, GOR2011, YEAR) %>%
     distinct()
   strata$hier3.id <- strata$LSOA.id
   LE_df <- left_join(strata, LE_df) %>%
