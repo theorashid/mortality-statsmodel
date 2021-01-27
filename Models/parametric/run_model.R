@@ -69,6 +69,12 @@ if (!args$test) {
   )
 }
 
+inital$r <- 10.0
+initial$sigma_alpha_age <- 0.6
+initial$sigma_beta_age <- 0.01
+initial$sigma_xi <- 0.15
+initial$sigma_gamma <- 0.1
+
 # ----- RUN MODEL PREPROCESSING ------
 # reduced adjacency matrix information for BYM
 model_inputs <- prep_model(

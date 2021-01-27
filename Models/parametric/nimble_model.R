@@ -46,12 +46,12 @@ run_MCMC_allcode <- function(seed,
       # AREA TERMS -- BYM priors
       # No hierarchy
       # Structured intercept and slope with a CAR prior
-      alpha_u[1:N_space] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_alpha_u, zero_mean = 0)
-      beta_u[1:N_space]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_beta_u, zero_mean = 0)
+      alpha_u[1:N_space] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_alpha_u, zero_mean = 1)
+      beta_u[1:N_space]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_beta_u, zero_mean = 1)
       # Unstructured IID intercept and slope
       for(s in 1:N_space) {
-        alpha_v[s] ~ dnorm(alpha0 + alpha_u[s], sd = sigma_alpha_v) # centred on common + CAR term
-        beta_v[s]  ~ dnorm(beta0 + beta_u[s], sd = sigma_beta_v)
+        alpha_v[s] ~ dnorm(alpha_u[s], sd = sigma_alpha_v) # centred on CAR term
+        beta_v[s]  ~ dnorm(beta_u[s], sd = sigma_beta_v)
       }
       sigma_alpha_u ~ dunif(0,2)
       tau_alpha_u <- pow(sigma_alpha_u,-2)
@@ -61,8 +61,8 @@ run_MCMC_allcode <- function(seed,
       sigma_beta_v ~ dunif(0,2)
       
       # AGE TERMS
-      alpha_age[1] <- 0 # initialise first terms for RW
-      beta_age[1]  <- 0
+      alpha_age[1] <- alpha0 # initialise first terms for RW
+      beta_age[1]  <- beta0
       for(a in 2:N_age_groups) {
         alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
         beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
@@ -122,15 +122,16 @@ run_MCMC_allcode <- function(seed,
                                adj = inputs$adj,
                                weights = inputs$weights,
                                num = inputs$num)
-    specific_inits <- list(alpha0 = init_vals$global.intercept,
-                           beta0 = init_vals$global.slope,
-                           alpha_u = init_vals$space.intercepts,
+    specific_inits <- list(alpha_u = init_vals$space.intercepts,
                            beta_u = init_vals$space.slopes,
-                           sigma_alpha_u = 0.1, sigma_beta_u = 0.1,
-                           sigma_alpha_v = 0.1, sigma_beta_v = 0.1)
+                           sigma_alpha_u = 0.1, sigma_beta_u = 0.01,
+                           sigma_alpha_v = 0.1, sigma_beta_v = 0.01)
     
     specific_sigmas <- c("sigma_alpha_u", "sigma_beta_u",
                          "sigma_alpha_v", "sigma_beta_v")
+
+    specific_monitors2 <- c("alpha_u", "alpha_v",
+                            "beta_u", "beta_v")
     
   } else if (model_name == "nested") {
     code <- nimbleCode({
@@ -162,8 +163,8 @@ run_MCMC_allcode <- function(seed,
       
       # tier 1 terms
       for(s1 in 1:N_s1){
-        alpha_s1[s1] ~ dnorm(alpha0, sd = sigma_alpha_s1) # centred on common terms
-        beta_s1[s1] ~ dnorm(beta0, sd = sigma_beta_s1)
+        alpha_s1[s1] ~ dnorm(0, sd = sigma_alpha_s1)
+        beta_s1[s1] ~ dnorm(0, sd = sigma_beta_s1)
       }
       sigma_alpha_s1 ~ dunif(0,2)
       sigma_beta_s1  ~ dunif(0,2)
@@ -185,8 +186,8 @@ run_MCMC_allcode <- function(seed,
       sigma_beta_s3  ~ dunif(0,2)
       
       # AGE TERMS
-      alpha_age[1] <- 0 # initialise first terms for RW
-      beta_age[1]  <- 0
+      alpha_age[1] <- alpha0 # initialise first terms for RW
+      beta_age[1]  <- beta0
       for(a in 2:N_age_groups){
         alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
         beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
@@ -245,17 +246,18 @@ run_MCMC_allcode <- function(seed,
                                N_s2 = max(mortdata$hier2.id),
                                grid.lookup = inputs[[1]],
                                grid.lookup.s2 = inputs[[2]])
-    specific_inits <- list(alpha0 = init_vals$global.intercept,
-                           beta0 = init_vals$global.slope,
-                           alpha_s3 = init_vals$space.intercepts,
+    specific_inits <- list(alpha_s3 = init_vals$space.intercepts,
                            beta_s3 = init_vals$space.slopes,
-                           sigma_alpha_s1 = 0.1, sigma_beta_s1 = 0.1,
-                           sigma_alpha_s2 = 0.1, sigma_beta_s2 = 0.1,
-                           sigma_alpha_s3 = 0.1, sigma_beta_s3 = 0.1)
+                           sigma_alpha_s1 = 0.1, sigma_beta_s1 = 0.01,
+                           sigma_alpha_s2 = 0.1, sigma_beta_s2 = 0.01,
+                           sigma_alpha_s3 = 0.1, sigma_beta_s3 = 0.01)
     
     specific_sigmas <- c("sigma_alpha_s1", "sigma_beta_s1",
                          "sigma_alpha_s2", "sigma_beta_s2",
                          "sigma_alpha_s3", "sigma_beta_s3")
+    specific_monitors2 <- c("alpha_s1", "beta_s1",
+                            "alpha_s2", "beta_s2",
+                            "alpha_s3", "beta_s3")                     
     
   } else stop("BYM or nested model names only")
   
@@ -270,9 +272,14 @@ run_MCMC_allcode <- function(seed,
   ), specific_constants)
   
   inits <- c(list(
-    alpha_age = init_vals$age.intercepts,
-    sigma_alpha_age = 0.75, sigma_beta_age = 0.015,
-    sigma_xi = 0.08, sigma_gamma = 0.1, r = 20.0
+    alpha0 = init_vals$global.intercept,
+    beta0 = init_vals$global.slope,
+    alpha_age = init_vals$global.intercept + init_vals$age.intercepts,
+    sigma_alpha_age = init_vals$sigma_alpha_age,
+    sigma_beta_age = init_vals$sigma_beta_age,
+    sigma_xi = init_vals$sigma_xi,
+    sigma_gamma = init_vals$sigma_gamma,
+    r = init_vals$sigma_r
   ), specific_inits)
   
   data <- list(y = mortdata$deaths,
@@ -296,8 +303,8 @@ run_MCMC_allcode <- function(seed,
   sigmas <- c("sigma_alpha_age", "sigma_beta_age",
               "sigma_xi", "sigma_gamma",
               specific_sigmas)
-  monitors2 <- c("r", "alpha_age", "beta_age", 
-                 "alpha0", "beta0", sigmas)
+  monitors2 <- c("r", "alpha0", "beta0", "alpha_age", "beta_age", 
+                 "xi", specific_monitors2, sigmas)
   
   # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
   # 1. MCMC Configuration -- can be customised with different samplers

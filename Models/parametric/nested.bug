@@ -28,8 +28,8 @@ beta0  ~ dnorm(0, 0.00001)
 
 # tier 1 terms
 for(s1 in 1:N_s1){
-  alpha_s1[s1] ~ dnorm(alpha0, sd = sigma_alpha_s1) # centred on common terms
-  beta_s1[s1] ~ dnorm(beta0, sd = sigma_beta_s1)
+  alpha_s1[s1] ~ dnorm(0, sd = sigma_alpha_s1) # centred on common terms
+  beta_s1[s1] ~ dnorm(0, sd = sigma_beta_s1)
 }
 sigma_alpha_s1 ~ dunif(0,2)
 sigma_beta_s1  ~ dunif(0,2)
@@ -51,8 +51,8 @@ sigma_alpha_s3 ~ dunif(0,2)
 sigma_beta_s3  ~ dunif(0,2)
 
 # AGE TERMS
-alpha_age[1] <- 0 # initialise first terms for RW
-beta_age[1]  <- 0
+alpha_age[1] <- alpha0 # initialise first terms for RW
+beta_age[1]  <- beta0
 for(a in 2:N_age_groups){
   alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
   beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
