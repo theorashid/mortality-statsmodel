@@ -9,7 +9,8 @@ model{
 # BYM for each space +
 # Age effects (random walk prior) +
 # Age-space interaction (normal prior) +
-# Age random walk
+# Age random walk +
+# Space random walk
 # --------------------
 
 # PRIORS
@@ -54,13 +55,14 @@ for(a in 1:N_age_groups) {
 }
 sigma_xi ~ dunif(0,2)
 
-# space slope (as no space-time random walk)
+# space-time random walk
 for(s in 1:N_space){
-  space_slope[s, 1] <- 0
+  nu[s, 1] <- 0
   for(t in 2:N_year) {
-    space_slope[s, t] <- space_slope[s, t-1] + beta_v[s]
+    nu[s, t] ~ dnorm(nu[s, t-1] + beta_s3[s], sd = sigma_nu)
   }
 }
+sigma_nu ~ dunif(0,2)
 
 # age-time random walk
 for(a in 1:N_age_groups){
@@ -75,7 +77,7 @@ sigma_gamma ~ dunif(0,2)
 for(a in 1:N_age_groups) {
   for(s in 1:N_space) {
     for(t in 1:N_year) {
-      lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + gamma[a, t]
+      lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
     }
   }
 }

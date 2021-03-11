@@ -34,7 +34,8 @@ run_MCMC_allcode <- function(seed,
       # BYM for each space +
       # Age effects (random walk prior) +
       # Age-space interaction (normal prior) +
-      # Age random walk
+      # Age random walk +
+      # Space random walk
       # --------------------
       
       # PRIORS
@@ -79,13 +80,14 @@ run_MCMC_allcode <- function(seed,
       }
       sigma_xi ~ dunif(0,2)
       
-      # space slope (as no space-time random walk)
+      # space-time random walk
       for(s in 1:N_space){
-        space_slope[s, 1] <- 0
+        nu[s, 1] <- 0
         for(t in 2:N_year) {
-          space_slope[s, t] <- space_slope[s, t-1] + beta_v[s]
+          nu[s, t] ~ dnorm(nu[s, t-1] + beta_s3[s], sd = sigma_nu)
         }
       }
+      sigma_nu ~ dunif(0,2)
       
       # age-time random walk
       for(a in 1:N_age_groups){
@@ -101,7 +103,7 @@ run_MCMC_allcode <- function(seed,
       for(a in 1:N_age_groups) {
         for(s in 1:N_space) {
           for(t in 1:N_year) {
-            lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + gamma[a, t]
+            lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
           }
         }
       }
@@ -147,7 +149,8 @@ run_MCMC_allcode <- function(seed,
       # Random effects for tier 3 (smallest) (normal prior, hierarchy) +
       # Age effects (random walk prior) +
       # Age-space interaction (normal prior) +
-      # Age random walk
+      # Age random walk +
+      # Space random walk
       #
       # Designed for the ONS hierarchy LSOA -> MSOA -> LAD / MSOA -> LAD -> Region (3 -> 2 -> 1)
       # --------------------
@@ -204,13 +207,14 @@ run_MCMC_allcode <- function(seed,
       }
       sigma_xi ~ dunif(0,2)
       
-      # space slope (as no space-time random walk)
+      # space-time random walk
       for(s in 1:N_space){
-        space_slope[s, 1] <- 0
+        nu[s, 1] <- 0
         for(t in 2:N_year) {
-          space_slope[s, t] <- space_slope[s, t-1] + beta_s3[s]
+          nu[s, t] ~ dnorm(nu[s, t-1] + beta_s3[s], sd = sigma_nu)
         }
       }
+      sigma_nu ~ dunif(0,2)
       
       # age-time random walk
       for(a in 1:N_age_groups){
@@ -225,7 +229,7 @@ run_MCMC_allcode <- function(seed,
       for(a in 1:N_age_groups) {
         for(s in 1:N_space) {
           for(t in 1:N_year) {
-            lograte[a, s, t] <- xi[a, s] + space_slope[s, t] + gamma[a, t]
+            lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
           }
         }
       }
@@ -277,6 +281,7 @@ run_MCMC_allcode <- function(seed,
     alpha_age = init_vals$global.intercept + init_vals$age.intercepts,
     sigma_alpha_age = init_vals$sigma_alpha_age,
     sigma_beta_age = init_vals$sigma_beta_age,
+    sigma_nu = init_vals$sigma_nu,
     sigma_xi = init_vals$sigma_xi,
     sigma_gamma = init_vals$sigma_gamma,
     r = init_vals$sigma_r
