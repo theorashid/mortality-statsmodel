@@ -84,7 +84,7 @@ run_MCMC_allcode <- function(seed,
       for(s in 1:N_space){
         nu[s, 1] <- 0
         for(t in 2:N_year) {
-          nu[s, t] ~ dnorm(nu[s, t-1] + beta_s3[s], sd = sigma_nu)
+          nu[s, t] ~ dnorm(nu[s, t-1] + beta_v[s], sd = sigma_nu)
         }
       }
       sigma_nu ~ dunif(0,2)
