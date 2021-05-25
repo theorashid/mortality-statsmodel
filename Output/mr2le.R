@@ -4,7 +4,7 @@
 # Convert mortality into life expectancy
 # Uses n_pd samples without replacement
 
-library(dplyr)
+library(tidverse)
 library(foreach)
 
 source(here::here("Output", "analysis_utils.R"))
@@ -28,13 +28,15 @@ n_pd <- 1000 # number of posterior draws
 print("----- LOADING DATA... -----")
 if (!test) {
   chain_output <- readRDS(
-    here::here("Output", "mcmc_output",
-    paste0(region, model, sex, "_mcmc_out.rds"))
+    here::here(
+      "Output", "mcmc_output", paste0(region, model, sex, "_mcmc_out.rds")
+    )
   )
 } else {
   chain_output <- readRDS(
-    here::here("Output", "mcmc_output",
-    paste0(region, model, sex, "_T", "_mcmc_out.rds"))
+    here::here(
+      "Output", "mcmc_output", paste0(region, model, sex, "_T", "_mcmc_out.rds")
+    )
   )
 }
 
@@ -130,36 +132,39 @@ LE_df <- bind_cols(LE_df, le)
 
 strata <- load_data(
   data_path = data_path, region = region, sex = sex, test = test
-) 
+)
+
 if (region == "MSOA") {
   strata <- strata %>%
     select(
       MSOA.id, YEAR.id,
-      MSOA2011, LAD2020, GOR2011, YEAR) %>%
-    distinct()
-  strata$hier3.id <- strata$MSOA.id
+      MSOA2011, LAD2020, GOR2011, YEAR
+    ) %>%
+    distinct() %>%
+    mutate(hier3.id = MSOA.id)
   LE_df <- left_join(strata, LE_df) %>%
     select(-c(MSOA.id, hier3.id, YEAR.id))
 } else if (region == "LSOA") {
   strata <- strata %>%
     select(
       LSOA.id, YEAR.id,
-      LSOA2011, MSOA2011, LAD2020, GOR2011, YEAR) %>%
-    distinct()
-  strata$hier3.id <- strata$LSOA.id
+      LSOA2011, MSOA2011, LAD2020, GOR2011, YEAR
+    ) %>%
+    distinct() %>%
+    mutate(hier3.id = LSOA.id)
   LE_df <- left_join(strata, LE_df) %>%
     select(-c(LSOA.id, hier3.id, YEAR.id))
 }
 
 paste0("----- SAVING LIFE EXPECTANCY SAMPLES -----")
 if (!test) {
-  write.csv(
+  write_csv(
     LE_df,
     here::here("Output", "e0_samples", 
     paste0(region, model, sex, "_e0_samples.csv"))
   )
 } else {
-  write.csv(
+  write_csv(
     LE_df,
     here::here("Output", "e0_samples", 
     paste0(region, model, sex, "_T", "_e0_samples.csv"))

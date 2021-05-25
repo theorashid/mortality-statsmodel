@@ -6,15 +6,17 @@ suppressPackageStartupMessages({
 #' function required to run the mcmc chains in parallel
 #' this will build a separate model on each core
 #' the function body contains the BYM and nested models
-run_MCMC_allcode <- function(seed,
-                             model_name,
-                             mortdata,
-                             init_vals,
-                             n_iter,
-                             n_burn,
-                             thin_1,
-                             thin_2,
-                             inputs) {
+run_MCMC_allcode <- function(
+  seed,
+  model_name,
+  mortdata,
+  init_vals,
+  n_iter,
+  n_burn,
+  thin_1,
+  thin_2,
+  inputs
+) {
   library(nimble)
   library(dplyr)
   
@@ -120,20 +122,32 @@ run_MCMC_allcode <- function(seed,
       r ~ dunif(0,50)
     })
     
-    specific_constants <- list(L = length(inputs$adj), # inputs = nbInfo
-                               adj = inputs$adj,
-                               weights = inputs$weights,
-                               num = inputs$num)
-    specific_inits <- list(alpha_u = init_vals$space.intercepts,
-                           beta_u = init_vals$space.slopes,
-                           sigma_alpha_u = 0.1, sigma_beta_u = 0.01,
-                           sigma_alpha_v = 0.1, sigma_beta_v = 0.01)
-    
-    specific_sigmas <- c("sigma_alpha_u", "sigma_beta_u",
-                         "sigma_alpha_v", "sigma_beta_v")
+    specific_constants <- list(
+      L       = length(inputs$adj),
+      # inputs = nbInfo
+      adj     = inputs$adj,
+      weights = inputs$weights,
+      num     = inputs$num
+    )
 
-    specific_monitors2 <- c("alpha_u", "alpha_v",
-                            "beta_u", "beta_v")
+    specific_inits <- list(
+      alpha_u       = init_vals$space.intercepts,
+      beta_u        = init_vals$space.slopes,
+      sigma_alpha_u = 0.1,
+      sigma_beta_u  = 0.01,
+      sigma_alpha_v = 0.1,
+      sigma_beta_v  = 0.01
+    )
+    
+    specific_sigmas <- c(
+      "sigma_alpha_u", "sigma_beta_u",
+      "sigma_alpha_v", "sigma_beta_v"
+    )
+
+    specific_monitors2 <- c(
+      "alpha_u", "alpha_v",
+      "beta_u", "beta_v"
+    )
     
   } else if (model_name == "nested") {
     code <- nimbleCode({
@@ -246,57 +260,81 @@ run_MCMC_allcode <- function(seed,
       r ~ dunif(0,50)
     })
     
-    specific_constants <- list(N_s1 = max(mortdata$hier1.id),
-                               N_s2 = max(mortdata$hier2.id),
-                               grid.lookup = inputs[[1]],
-                               grid.lookup.s2 = inputs[[2]])
-    specific_inits <- list(alpha_s3 = init_vals$space.intercepts,
-                           beta_s3 = init_vals$space.slopes,
-                           sigma_alpha_s1 = 0.1, sigma_beta_s1 = 0.01,
-                           sigma_alpha_s2 = 0.1, sigma_beta_s2 = 0.01,
-                           sigma_alpha_s3 = 0.1, sigma_beta_s3 = 0.01)
+    specific_constants <- list(
+      N_s1           = max(mortdata$hier1.id),
+      N_s2           = max(mortdata$hier2.id),
+      grid.lookup    = inputs[[1]],
+      grid.lookup.s2 = inputs[[2]]
+    )
+
+    specific_inits <- list(
+      alpha_s3       = init_vals$space.intercepts,
+      beta_s3        = init_vals$space.slopes,
+      sigma_alpha_s1 = 0.1, 
+      sigma_beta_s1  = 0.01,
+      sigma_alpha_s2 = 0.1, 
+      sigma_beta_s2  = 0.01,
+      sigma_alpha_s3 = 0.1, 
+      sigma_beta_s3  = 0.01
+    )
     
-    specific_sigmas <- c("sigma_alpha_s1", "sigma_beta_s1",
-                         "sigma_alpha_s2", "sigma_beta_s2",
-                         "sigma_alpha_s3", "sigma_beta_s3")
-    specific_monitors2 <- c("alpha_s1", "beta_s1",
-                            "alpha_s2", "beta_s2",
-                            "alpha_s3", "beta_s3")                     
+    specific_sigmas <- c(
+      "sigma_alpha_s1", "sigma_beta_s1",
+      "sigma_alpha_s2", "sigma_beta_s2",
+      "sigma_alpha_s3", "sigma_beta_s3"
+    )
+    specific_monitors2 <- c(
+      "alpha_s1", "beta_s1",
+      "alpha_s2", "beta_s2",
+      "alpha_s3", "beta_s3"
+    )                     
     
   } else stop("BYM or nested model names only")
   
-  constants <- c(list(
-    N = nrow(mortdata),
-    N_year = max(mortdata$YEAR.id),
-    N_age_groups = max(mortdata$age_group.id),
-    N_space = max(mortdata$hier3.id),
-    age = mortdata$age_group.id,
-    space = mortdata$hier3.id, 
-    yr = mortdata$YEAR.id
-  ), specific_constants)
+  constants <- c(
+    list(
+      N            = nrow(mortdata),
+      N_year       = max(mortdata$YEAR.id),
+      N_age_groups = max(mortdata$age_group.id),
+      N_space      = max(mortdata$hier3.id),
+      age          = mortdata$age_group.id,
+      space        = mortdata$hier3.id, 
+      yr           = mortdata$YEAR.id
+    ), 
+    specific_constants
+  )
   
-  inits <- c(list(
-    alpha0 = init_vals$global.intercept,
-    beta0 = init_vals$global.slope,
-    alpha_age = init_vals$global.intercept + init_vals$age.intercepts,
-    sigma_alpha_age = init_vals$sigma_alpha_age,
-    sigma_beta_age = init_vals$sigma_beta_age,
-    sigma_nu = init_vals$sigma_nu,
-    sigma_xi = init_vals$sigma_xi,
-    sigma_gamma = init_vals$sigma_gamma,
-    r = init_vals$sigma_r
-  ), specific_inits)
+  inits <- c(
+    list(
+      alpha0          = init_vals$global.intercept,
+      beta0           = init_vals$global.slope,
+      alpha_age       = init_vals$global.intercept + init_vals$age.intercepts,
+      sigma_alpha_age = init_vals$sigma_alpha_age,
+      sigma_beta_age  = init_vals$sigma_beta_age,
+      sigma_nu        = init_vals$sigma_nu,
+      sigma_xi        = init_vals$sigma_xi,
+      sigma_gamma     = init_vals$sigma_gamma,
+      r               = init_vals$sigma_r
+    ), 
+    specific_inits
+  )
   
-  data <- list(y = mortdata$deaths,
-               n = mortdata$population)
+  data <- list(
+    y = mortdata$deaths,
+    n = mortdata$population
+  )
   
-  # ----- CREATE THE MODEL -----
-  model <- nimbleModel(code = code, constants = constants,
-                       inits = inits, data = data,
-                       calculate = FALSE) # model in R
+  # ----- CREATE THE MODEL IN R -----
+  model <- nimbleModel(
+    code      = code, 
+    constants = constants,
+    inits     = inits, 
+    data      = data,
+    calculate = FALSE
+  )
   print("----- MODEL BUILT -----")
   
-  # ----- COMPILE THE MODEL IN C-CODE -----
+  # ----- COMPILE THE MODEL IN C -----
   Cmodel <- compileNimble(model)
   print("----- MODEL COMPILED -----")
   
@@ -305,17 +343,26 @@ run_MCMC_allcode <- function(seed,
   monitors <- c("lograte")
   
   # Hyperparameter monitors to check covergence, with some thinning
-  sigmas <- c("sigma_alpha_age", "sigma_beta_age",
-              "sigma_xi", "sigma_gamma",
-              specific_sigmas)
-  monitors2 <- c("r", "alpha0", "beta0", "alpha_age", "beta_age", 
-                 "xi", specific_monitors2, sigmas)
+  sigmas <- c(
+    "sigma_alpha_age", "sigma_beta_age",
+    "sigma_xi", "sigma_gamma",
+    specific_sigmas
+  )
+  monitors2 <- c(
+    "r", "alpha0", "beta0", "alpha_age", "beta_age", "xi", 
+    specific_monitors2, sigmas
+  )
   
   # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
   # 1. MCMC Configuration -- can be customised with different samplers
-  mcmcConf <- configureMCMC(model = Cmodel,
-                            monitors = monitors, monitors2 = monitors2,
-                            thin = thin_1, thin2 = thin_2, print = TRUE) # input the R model
+  mcmcConf <- configureMCMC(
+    model     = Cmodel,
+    monitors  = monitors, 
+    monitors2 = monitors2,
+    thin      = thin_1, 
+    thin2     = thin_2, 
+    print     = TRUE
+  )
   
   # sample standard deviations on log scale
   mcmcConf$removeSamplers(sigmas)
@@ -332,9 +379,13 @@ run_MCMC_allcode <- function(seed,
   
   # 3. Run MCMC
   # Return samples only
-  mcmc.out <- runMCMC(Cmcmc,
-                      niter = n_iter, nburnin = n_burn, #nchains = 1, summary = TRUE,
-                      progressBar = TRUE, setSeed = seed)
+  mcmc.out <- runMCMC(
+    Cmcmc,
+    niter       = n_iter, 
+    nburnin     = n_burn, 
+    #nchains = 1, summary = TRUE,
+    progressBar = TRUE, 
+    setSeed     = seed)
   
   return(mcmc.out)
 }

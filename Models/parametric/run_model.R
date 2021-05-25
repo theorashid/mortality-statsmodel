@@ -81,41 +81,47 @@ initial$sigma_gamma     <- 0.1
 model_inputs <- prep_model(
   data_path = here::here("Data"),
   mortality = mortality, 
-  region = args$region, 
-  model = args$model
+  region    = args$region, 
+  model     = args$model
 )
 
 # ----- SET UP CLUSTER AND RUN -----
 if (as.numeric(args$num_chains) == 1) {
   print("----- RUNNING CHAIN -----")
-  system.time(chain_output <- run_MCMC_allcode(seed = 1,
-                                               model_name = args$model,
-                                               mortdata = mortality,
-                                               init_vals = initial,
-                                               n_iter = as.numeric(args$num_iter),
-                                               n_burn = as.numeric(args$num_burn),
-                                               thin_1 = as.numeric(args$thin_mort),
-                                               thin_2 = as.numeric(args$thin_param),
-                                               inputs = model_inputs))
+  system.time(
+    chain_output <- run_MCMC_allcode(
+      seed       = 1,
+      model_name = args$model,
+      mortdata   = mortality,
+      init_vals  = initial,
+      n_iter     = as.numeric(args$num_iter),
+      n_burn     = as.numeric(args$num_burn),
+      thin_1     = as.numeric(args$thin_mort),
+      thin_2     = as.numeric(args$thin_param),
+      inputs     = model_inputs
+    )
+  )
   print("----- ONE CHAIN RUN -----")
 } else {
   library(parallel)
   this_cluster <- makeCluster(as.numeric(args$num_chains))
   print(this_cluster)
   print("----- RUNNING CHAINS -----")
-  system.time(chain_output <- parLapply(cl = this_cluster,
-                                        X = 1:as.numeric(args$num_chains),
-                                        fun = run_MCMC_allcode,
-                                        model_name = args$model,
-                                        mortdata = mortality,
-                                        init_val = initial,
-                                        n_iter = as.numeric(args$num_iter),
-                                        n_burn = as.numeric(args$num_burn),
-                                        thin_1 = as.numeric(args$thin_mort),
-                                        thin_2 = as.numeric(args$thin_param),
-                                        inputs = model_inputs
-  ))
-
+  system.time(
+    chain_output <- parLapply(
+      cl         = this_cluster,
+      X          = 1:as.numeric(args$num_chains),
+      fun        = run_MCMC_allcode,
+      model_name = args$model,
+      mortdata   = mortality,
+      init_val   = initial,
+      n_iter     = as.numeric(args$num_iter),
+      n_burn     = as.numeric(args$num_burn),
+      thin_1     = as.numeric(args$thin_mort),
+      thin_2     = as.numeric(args$thin_param),
+      inputs     = model_inputs
+    )
+  )
   print("----- CHAINS RUN -----")
   stopCluster(this_cluster)
 }

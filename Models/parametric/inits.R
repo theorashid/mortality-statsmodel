@@ -20,12 +20,12 @@ mortality <- load_data(data_path, region = region, sex = sex, test = FALSE)
 if (region == "MSOA") {
   system.time(
     mod <- glmer(deaths ~ offset(log(population)) + YEAR.id + (1|age_group.id) + (1 + YEAR.id|MSOA.id), family = "poisson", data = subset(mortality, population > 0))
-    )
+  )
   bin <- ranef(mod)$MSOA.id
 } else if (region == "LSOA") {
   system.time(
     mod <- glmer(deaths ~ offset(log(population)) + YEAR.id + (1|age_group.id) + (1 + YEAR.id|LSOA.id), family = "poisson", data = subset(mortality, population > 0))
-    )
+  )
   bin <- ranef(mod)$LSOA.id
 } else stop("invalid region: MSOA or LSOA only")
 
@@ -45,8 +45,10 @@ age_inits <- bin$"(Intercept)"
 summary(mod)
 
 inits <- list(intercept, slope, space_int_inits, space_slope_inits, age_inits)
-names(inits) <- c("global.intercept", "global.slope", "space.intercepts",
-                  "space.slopes", "age.intercepts")
+names(inits) <- c(
+  "global.intercept", "global.slope", "space.intercepts",
+  "space.slopes", "age.intercepts"
+)
 
 saveRDS(
   inits,
@@ -57,20 +59,28 @@ saveRDS(
 
 if (region == "MSOA") {
   sub <- mortality %>% filter(GOR2011 == "E12000007")
-  inits_sub <- list(intercept, slope, 
-                    space_int_inits[unique(sub$MSOA.id)], 
-                    space_slope_inits[unique(sub$MSOA.id)],
-                    age_inits)
+  inits_sub <- list(
+    intercept, 
+    slope,
+    space_int_inits[unique(sub$MSOA.id)],
+    space_slope_inits[unique(sub$MSOA.id)],
+    age_inits
+  )
 } else if (region == "LSOA") {
   sub <- mortality %>% filter(LAD2011 == "E09000013")
-  inits_sub <- list(intercept, slope, 
-                    space_int_inits[unique(sub$LSOA.id)], 
-                    space_slope_inits[unique(sub$LSOA.id)],
-                    age_inits)
+  inits_sub <- list(
+    intercept,
+    slope,
+    space_int_inits[unique(sub$LSOA.id)],
+    space_slope_inits[unique(sub$LSOA.id)],
+    age_inits
+  )
 }
 
-names(inits_sub) <- c("global.intercept", "global.slope", "space.intercepts",
-                      "space.slopes", "age.intercepts")
+names(inits_sub) <- c(
+  "global.intercept", "global.slope", "space.intercepts",
+  "space.slopes", "age.intercepts"
+)
                       
 saveRDS(
   inits_sub,

@@ -1,10 +1,9 @@
 # Theo AO Rashid -- October 2020
 
 # ----- Samples analysis -----
-library(dplyr)
+library(tidyverse)
 library(reshape2)
 library(rstan)
-library(ggplot2)
 library(foreach)
 
 print(paste0("AVAILABLE CORES = ", detectCores()))
@@ -21,13 +20,15 @@ test   <- TRUE
 print("----- LOADING DATA... -----")
 if (!test) {
   chain_output <- readRDS(
-    here::here("Output", "mcmc_output", 
-    paste0(region, model, sex, "_mcmc_out.rds"))
+    here::here(
+      "Output", "mcmc_output", paste0(region, model, sex, "_mcmc_out.rds")
+    )
   )
 } else {
   chain_output <- readRDS(
-    here::here("Output", "mcmc_output", 
-    paste0(region, model, sex, "_T", "_mcmc_out.rds"))
+    here::here(
+      "Output", "mcmc_output", paste0(region, model, sex, "_T", "_mcmc_out.rds")
+    )
   )
 }
 
@@ -75,9 +76,9 @@ print(
     mr <- foreach(params_vec = tmp) %dopar% {
       reorganise_mortality(
         chain_output = chain_output,
-        params_vec = params_vec,
-        n_samples = n_samples,
-        n_chains = n_chains
+        params_vec   = params_vec,
+        n_samples    = n_samples,
+        n_chains     = n_chains
       )
     }
     mr <- unlist(mr, recursive = FALSE)
@@ -100,14 +101,16 @@ print(
 
 if (!test) {
   png(
-    file = here::here("Output", "convergence", 
-    paste0(region, model, sex, "_rhat.png")),
+    file = here::here(
+      "Output", "convergence", paste0(region, model, sex, "_rhat.png")
+    ),
     width = 600, height = 350
-    )
+  )
 } else {
   png(
-    file = here::here("Output", "convergence", 
-    paste0(region, model, sex, "_T", "_rhat.png")),
+    file = here::here(
+      "Output", "convergence", paste0(region, model, sex, "_T", "_rhat.png")
+    ),
     width = 600, height = 350
   )
 }
@@ -131,14 +134,16 @@ print(
 
 if (!test) {
   png(
-    file = here::here("Output", "convergence", 
-    paste0(region, model, sex, "_ess_bulk.png")),
+    file = here::here(
+      "Output", "convergence", paste0(region, model, sex, "_ess_bulk.png")
+    ),
     width = 600, height = 350
-    )
+  )
 } else {
   png(
-    file = here::here("Output", "convergence", 
-    paste0(region, model, sex, "_T", "_ess_bulk.png")),
+    file = here::here(
+      "Output", "convergence", paste0(region, model, sex, "_T", "_ess_bulk.png")
+    ),
     width = 600, height = 350
   )
 }
@@ -161,14 +166,16 @@ print(
 
 if (!test) {
   png(
-    file = here::here("Output", "convergence", 
-    paste0(region, model, sex, "_ess_tail.png")),
+    file = here::here(
+      "Output", "convergence", paste0(region, model, sex, "_ess_tail.png")
+    ),
     width = 600, height = 350
-    )
+  )
 } else {
   png(
-    file = here::here("Output", "convergence", 
-    paste0(region, model, sex, "_T", "_ess_tail.png")),
+    file = here::here(
+      "Output", "convergence", paste0(region, model, sex, "_T", "_ess_tail.png")
+    ),
     width = 600, height = 350
   )
 }
@@ -187,11 +194,11 @@ sub <- sample.int(n_params, n_sub)
 
 traces <- list()
 for (i in sub) {
-  tmp <- as.data.frame(mr[[i]])
-  name <- names_params[i]
-  tmp$iteration <- 1:n_samples
-  tmp <- melt(tmp,  id.vars = "iteration", variable.name = "chain")
-  tmp$name <- name
+  tmp            <- as_tibble(mr[[i]])
+  name           <- names_params[i]
+  tmp$iteration  <- 1:n_samples
+  tmp            <- melt(tmp, id.vars = "iteration", variable.name = "chain")
+  tmp$name       <- name
   traces[[name]] <- tmp
 }
 traces <- do.call(rbind, traces)
@@ -202,9 +209,11 @@ p <- traces %>%
   labs(x = "", y = "") +
   theme(legend.position = "none", text = element_text(size = 6)) + 
   facet_wrap( ~ name, ncol = 10)
+
 ggsave(
-  here::here("Output", "convergence", 
-  paste0(region, model, sex, "_T", "_mr_trace.png")),
+  here::here(
+    "Output", "convergence", paste0(region, model, sex, "_T", "_mr_trace.png")
+  ),
   p, scale = 4
 )
 
@@ -228,11 +237,11 @@ for (i in 1:length(hyp)) {
 print("----- PLOTTING HYPERPARAMETER CONVERGENCE -----")
 traces <- list()
 for (i in 1:length(hyp)) {
-  tmp <- as.data.frame(hyp[[i]])
-  name <- names_hyps[i]
-  tmp$iteration <- 1:n_samples2
-  tmp <- melt(tmp,  id.vars = "iteration", variable.name = "chain")
-  tmp$name <- name
+  tmp            <- as_tibble(hyp[[i]])
+  name           <- names_hyps[i]
+  tmp$iteration  <- 1:n_samples2
+  tmp            <- melt(tmp,  id.vars = "iteration", variable.name = "chain")
+  tmp$name       <- name
   traces[[name]] <- tmp
 }
 traces <- do.call(rbind, traces)
@@ -243,8 +252,10 @@ p <- traces %>%
   labs(x = "", y = "") +
   theme(legend.position = "none", text = element_text(size = 8)) + 
   facet_wrap( ~ name, ncol = 8)
+
 ggsave(
-  here::here("Output", "convergence", 
-  paste0(region, model, sex, "_T", "_hyp_trace.png")),
+  here::here(
+    "Output", "convergence", paste0(region, model, sex, "_T", "_hyp_trace.png")
+  ),
   p, scale = 4
 )

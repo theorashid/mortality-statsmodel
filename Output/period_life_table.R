@@ -24,15 +24,15 @@
 	# use known values. For the rest use interpolation l71 = l70 * exp(-mu70), 
 	# l72 = l70 * exp(-2 * mu70),..., l84 = l80 * exp(-4 * mu80)
 	lx70 <- rbind(
-			lx70[rep(seq(3), each = 5), , drop = FALSE] * 
-				exp(-seq(0, 4) * mux[rep(seq(3), each = 5), , drop = FALSE]), 
-			lx70[4, , drop = FALSE]
-		)
+		x70[rep(seq(3), each = 5), , drop = FALSE] * exp(-seq(0, 4) * mux[rep(seq(3), each = 5), , drop = FALSE]), 
+		lx70[4, , drop = FALSE]
+	)
 	
 	# Calculate dx and qx for 1-year age groups using lx, for ages >= 70
-	dx70 <- rbind(lx70[-nrow(lx70), , drop = FALSE] - lx70[-1, , drop = FALSE], 
-				lx70[nrow(lx70), , drop = FALSE]
-			)
+	dx70 <- rbind(
+		lx70[-nrow(lx70), , drop = FALSE] - lx70[-1, , drop = FALSE], 
+		lx70[nrow(lx70), , drop = FALSE]
+	)
 	qx70 <- dx70 / lx70
 		
 	# Run regression on logit of probability of dying
@@ -87,10 +87,11 @@
 	# 5 year age group that each individual age from 70 to 129 belongs to
 	x5y <- seq(70, 85, 5)[findInterval(70:129, seq(70, 85, 5))]
 	
-	ax70 <- as.vector(t(sapply(split(seq(nrow(dx70)), x5y),
+	ax70 <- as.vector(t(
+		sapply(split(seq(nrow(dx70)), x5y),
 			function(v) colSums(dx70[v, , drop = FALSE] * yl[v]) / 
 									colSums(dx70[v, , drop = FALSE]))
-		))
+	))
 	ax70
 }
 
