@@ -3,7 +3,7 @@ Mortality modelling using Bayesian hierarchical models and statistical machine l
 
 The parametric model code requires `R` version 3.6 or higher and the following packages:
 - `nimble` (>= 0.9.0)
-- `dplyr`
+- `tidyverse`
 - `docopt`
 - `here`
 - `lme4`
@@ -12,7 +12,6 @@ The parametric model code requires `R` version 3.6 or higher and the following p
 - `spdplyr`
 
 And the analysis code requires the further packages:
-- `ggplot2`
 - `reshape2`
 - `rstan`
 - `foreach`

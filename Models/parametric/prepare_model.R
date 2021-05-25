@@ -1,5 +1,5 @@
 suppressPackageStartupMessages({
-  library(dplyr)
+  library(tidyverse)
   library(geojsonio)
   library(spdep)
   library(spdplyr)
@@ -9,13 +9,15 @@ suppressPackageStartupMessages({
 load_data <- function(data_path, region, sex, test = FALSE) {
   if (region == "MSOA") {
     if(!test) {
-      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
-                                          "mortality_eng_ac_", region, ".csv"))
+      mortality <- read_csv(
+        file = paste0(data_path, "/Mortality/", "mortality_eng_ac_", region, ".csv")
+      )
       print(paste0("LOADED ENGLAND DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
     } else {
-      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
-                                          "mortality_ldn_ac_", region, ".csv"))
+      mortality <- read_csv(
+        file = paste0(data_path, "/Mortality/", "mortality_ldn_ac_", region, ".csv")
+      )
       print(paste0("LOADED LONDON DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
     }
@@ -23,21 +25,25 @@ load_data <- function(data_path, region, sex, test = FALSE) {
       select(-X) %>%
       filter(sex == !!sex) %>%
       select(-sex) %>%
-      arrange(MSOA2011, YEAR, age_group)
-    mortality$GOR.id <- mortality %>% group_indices(GOR2011)
-    mortality$LAD.id <- mortality %>% group_indices(LAD2020)
-    mortality$MSOA.id <- mortality %>% group_indices(MSOA2011)
-    mortality$age_group.id <- mortality %>% group_indices(age_group)
-    mortality$YEAR.id <- mortality %>% group_indices(YEAR)
+      arrange(MSOA2011, YEAR, age_group) %>%
+      mutate(
+        GOR.id       = mortality %>% group_by(GOR2011)   %>% group_indices(),
+        LAD.id       = mortality %>% group_by(LAD2020)   %>% group_indices(),
+        MSOA.id      = mortality %>% group_by(MSOA2011)  %>% group_indices(),
+        age_group.id = mortality %>% group_by(age_group) %>% group_indices(),
+        YEAR.id      = mortality %>% group_by(YEAR)      %>% group_indices()
+      )
   } else if (region == "LSOA") {
     if(!test) {
-      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
-                                          "mortality_ldn_ac_", region, ".csv"))
+      mortality <- read_csv(
+        file = paste0(data_path, "/Mortality/", "mortality_ldn_ac_", region, ".csv")
+      )
       print(paste0("LOADED LONDON DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
     } else {
-      mortality <- read.csv(file = paste0(data_path, "/Mortality/",
-                                          "mortality_hf_ac_", region, ".csv"))
+      mortality <- read_csv(
+        file = paste0(data_path, "/Mortality/", "mortality_hf_ac_", region, ".csv")
+      )
       print(paste0("LOADED HAMMERSMITH AND FULHAM DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
     }
@@ -45,13 +51,15 @@ load_data <- function(data_path, region, sex, test = FALSE) {
       select(-X) %>%
       filter(sex == !!sex) %>%
       select(-sex) %>%
-      arrange(LSOA2011, YEAR, age_group)
-    mortality$GOR.id <- mortality %>% group_indices(GOR2011)
-    mortality$LAD.id <- mortality %>% group_indices(LAD2020)
-    mortality$MSOA.id <- mortality %>% group_indices(MSOA2011)
-    mortality$LSOA.id <- mortality %>% group_indices(LSOA2011)
-    mortality$age_group.id <- mortality %>% group_indices(age_group)
-    mortality$YEAR.id <- mortality %>% group_indices(YEAR)
+      arrange(LSOA2011, YEAR, age_group) %>%
+      mutate(
+        GOR.id       = mortality %>% group_by(GOR2011)   %>% group_indices(),
+        LAD.id       = mortality %>% group_by(LAD2020)   %>% group_indices(),
+        MSOA.id      = mortality %>% group_by(MSOA2011)  %>% group_indices(),
+        LSOA.id      = mortality %>% group_by(LSOA2011)  %>% group_indices(),
+        age_group.id = mortality %>% group_by(age_group) %>% group_indices(),
+        YEAR.id      = mortality %>% group_by(YEAR)      %>% group_indices()
+      )
   } else stop("invalid region: MSOA or LSOA only")
   print(paste0("FILTERED MORTALITY DATA ROWS: ", dim(mortality)[1]))
   return(mortality)
@@ -166,7 +174,7 @@ prep_model <- function(data_path, mortality, region, model) {
       distinct() %>%
       arrange(hier2.id)
      
-    grid.lookup <- as.matrix(grid.lookup)
+    grid.lookup    <- as.matrix(grid.lookup)
     grid.lookup.s2 <- as.matrix(grid.lookup.s2)
     print("----- LOOKUPS MADE -----")
     return(list(grid.lookup, grid.lookup.s2))

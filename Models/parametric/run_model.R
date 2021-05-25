@@ -22,7 +22,7 @@ Arguments:
 args <- docopt::docopt(doc)
 
 suppressPackageStartupMessages({
-  library(dplyr)
+  library(tidyverse)
   library(nimble)
 })
 
@@ -30,28 +30,36 @@ source(here::here("Models", "parametric", "prepare_model.R"))
 source(here::here("Models", "parametric", "nimble_model.R"))
 
 # test parameters for running interactively
-# args <- list("LSOA", "BYM", "1", TRUE, "100", "10", "1", "2", "10")
-# names(args) <- list("region", "model", "sex", "test",
-#                     "num_iter", "num_burn", "num_chains",
-#                     "thin_mort", "thin_param")
+args <- list("LSOA", "BYM", "1", TRUE, "100", "10", "1", "2", "10")
+names(args) <- list(
+  "region", "model", "sex", "test",
+  "num_iter", "num_burn", "num_chains",
+  "thin_mort", "thin_param"
+)
 
 # ----- IMPORT MORTALITY DATA -----
 mortality <- load_data(
   data_path = here::here("Data"),
-  region = args$region,
-  sex = as.numeric(args$sex),
-  test = args$test
+  region    = args$region,
+  sex       = as.numeric(args$sex),
+  test      = args$test
 )
 
 # add ID columns, hier3 as lowest level of hierarchy
 if (args$region == "MSOA") {
-  mortality$hier1.id <- mortality$GOR.id
-  mortality$hier2.id <- mortality$LAD.id
-  mortality$hier3.id <- mortality$MSOA.id
+  mortality <- mortality %>%
+    mutate(
+      hier1.id = GOR.id,
+      hier2.id = LAD.id,
+      hier3.id = MSOA.id
+    )
 } else if (args$region == "LSOA") {
-  mortality$hier1.id <- mortality$LAD.id
-  mortality$hier2.id <- mortality$MSOA.id
-  mortality$hier3.id <- mortality$LSOA.id
+  mortality <- mortality %>%
+    mutate(
+      hier1.id = LAD.id,
+      hier2.id = MSOA.id,
+      hier3.id = LSOA.id
+    )
 }
 
 # ----- IMPORT INITIAL VALUES -----
