@@ -2,7 +2,7 @@
 Mortality modelling using Bayesian hierarchical models and statistical machine learning methods.
 
 The parametric model code requires `R` version 3.6 or higher and the following packages:
-- `nimble` (>= 0.9.0)
+- `nimble` (>= 0.9.1)
 - `tidyverse`
 - `docopt`
 - `here`
@@ -34,9 +34,6 @@ For the full explanation of the options available, run
 ```
 Rscript run_model.R --help
 ```
-
-## Nonparametric models
-Gaussian process regression and generalised additive models.
 
 ## Data
 The `Mortality/` folder contains two test datasets with simulated deaths (but real population data from [ONS](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/lowersuperoutputareamidyearpopulationestimates)). The LSOA file contains deaths for LSOAs in Hammersmith and Fulham, the test dataset for the London study. The MSOA file contains deaths for MSOAs in London, a test for the England study.
