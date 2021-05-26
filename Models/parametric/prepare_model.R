@@ -23,7 +23,8 @@ load_data <- function(data_path, region, sex, test = FALSE) {
     mortality <- mortality %>% 
       filter(sex == !!sex) %>%
       select(-sex) %>%
-      arrange(MSOA2011, YEAR, age_group) %>%
+      arrange(MSOA2011, YEAR, age_group)
+    mortality <- mortality %>%
       mutate(
         GOR.id       = mortality %>% group_by(GOR2011)   %>% group_indices(),
         LAD.id       = mortality %>% group_by(LAD2020)   %>% group_indices(),
@@ -48,7 +49,8 @@ load_data <- function(data_path, region, sex, test = FALSE) {
     mortality <- mortality %>%
       filter(sex == !!sex) %>%
       select(-sex) %>%
-      arrange(LSOA2011, YEAR, age_group) %>%
+      arrange(LSOA2011, YEAR, age_group)
+    mortality <- mortality %>%
       mutate(
         GOR.id       = mortality %>% group_by(GOR2011)   %>% group_indices(),
         LAD.id       = mortality %>% group_by(LAD2020)   %>% group_indices(),

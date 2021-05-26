@@ -9,7 +9,6 @@ The parametric model code requires `R` version 3.6 or higher and the following p
 - `lme4`
 - `geojsonio`
 - `spdep`
-- `spdplyr`
 
 And the analysis code requires the further packages:
 - `reshape2`

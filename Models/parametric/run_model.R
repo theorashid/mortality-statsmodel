@@ -21,21 +21,16 @@ Arguments:
 
 args <- docopt::docopt(doc)
 
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(nimble)
-})
-
 source(here::here("Models", "parametric", "prepare_model.R"))
 source(here::here("Models", "parametric", "nimble_model.R"))
 
 # test parameters for running interactively
-args <- list("LSOA", "BYM", "1", TRUE, "100", "10", "1", "2", "10")
-names(args) <- list(
-  "region", "model", "sex", "test",
-  "num_iter", "num_burn", "num_chains",
-  "thin_mort", "thin_param"
-)
+# args <- list("LSOA", "BYM", "1", TRUE, "100", "10", "1", "2", "10")
+# names(args) <- list(
+#   "region", "model", "sex", "test",
+#   "num_iter", "num_burn", "num_chains",
+#   "thin_mort", "thin_param"
+# )
 
 # ----- IMPORT MORTALITY DATA -----
 mortality <- load_data(
