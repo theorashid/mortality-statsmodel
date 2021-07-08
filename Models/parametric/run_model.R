@@ -72,7 +72,7 @@ if (!args$test) {
   )
 }
 
-inital$r                <- 10.0
+initial$r               <- 10.0
 initial$sigma_alpha_age <- 0.6
 initial$sigma_beta_age  <- 0.01
 initial$sigma_nu        <- 0.05
