@@ -314,7 +314,7 @@ run_MCMC_allcode <- function(
       sigma_nu        = init_vals$sigma_nu,
       sigma_xi        = init_vals$sigma_xi,
       sigma_gamma     = init_vals$sigma_gamma,
-      r               = init_vals$sigma_r
+      r               = init_vals$r
     ), 
     specific_inits
   )
