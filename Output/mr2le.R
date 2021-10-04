@@ -13,9 +13,7 @@ source(here::here("Models", "parametric", "prepare_model.R"))
 
 set.seed(1)
 print(paste0("AVAILABLE CORES = ", detectCores()))
-# numCores <- detectCores()
-numCores <- 8
-doParallel::registerDoParallel(cores = numCores)
+doParallel::registerDoParallel(cores = 8)
 
 # ----- IMPORT MORTALITY -----
 region <- "LSOA"
@@ -48,14 +46,6 @@ mr <- exp(mr) # samples of death rate per person in each stratum
 
 print(paste0("NUMBER OF SAMPLES = ", dim(mr)[1]))
 
-print(paste0("NUMBER OF DEATH RATES > 1 = ", sum(mr > 1), " OUT OF ", length(mr)))
-
-print("REMOVING DEATH RATES > 1")
-mr[mr > 1.0] <- NA # cannot have death rates above 1
-mr <- mr[rowSums(is.na(mr)) == 0,] # remove these rows with death rates > 1
-
-print(paste0("NUMBER OF AVAILABLE SAMPLES = ", dim(mr)[1]))
-
 # get n_pd subsamples
 print(paste0("NUMBER OF POSTERIOR DRAWS = ", n_pd))
 
@@ -65,7 +55,7 @@ if (n_pd > dim(mr)[1]) {
   n_pd <- dim(mr)[1]
 } else {
   print(paste0("NUMBER OF POSTERIOR DRAWS = ", n_pd))
-  mr <- mr[sample(nrow(mr), n_pd, replace=FALSE), ]
+  mr <- mr[sample(nrow(mr), n_pd, replace = FALSE), ]
 }
 
 # ----- ARRANGE BY AGE GROUP -----
@@ -84,19 +74,19 @@ n_ages  <- max(strata$age_group.id)
 n_locs  <- max(strata$hier3.id)
 n_years <- max(strata$YEAR.id)
 
-# the num_groups_per_core divides each group for parallel into 
+# the num_groups_per_core divides each group for parallel into
 # num_groups_per_core*num_ages ~ 1500 (for London) which is near-optimal
-num_groups_per_core <- n_years*5
-chunk_size <- num_groups_per_core*n_ages
+num_groups_per_core <- n_years * 5
+chunk_size <- num_groups_per_core * n_ages
 print(paste0("CHUNK SIZE = ", chunk_size))
 
 mr <- mr %>%
   select(-c(age_group.id, hier3.id, YEAR.id)) # samples only
 mr <- as.vector(t(stack(mr)[1])) # stack all on top of each other
 
-# this sets mrsample into list of length (4835/5)*n_pd with each element a 
+# this sets mrsample into list of length (4835/5)*n_pd with each element a
 # vector of size ~ 1500
-mr <- split(mr, ceiling(seq_along(mr)/chunk_size))
+mr <- split(mr, ceiling(seq_along(mr) / chunk_size))
 print(paste0("NUMBER OF CHUNKS = ", length(mr)))
 
 # ---- CALCULATE LIFE EXPECTANCIES -----
@@ -106,9 +96,9 @@ print(
   system.time({
     result <- foreach(mx = mr) %dopar% {
       PeriodLifeTable(
-        age = rep(ages, num_groups_per_core), 
-        mx  = mx, 
-        ax  = rep(NA, n_ages * num_groups_per_core), 
+        age = rep(ages, num_groups_per_core),
+        mx  = mx,
+        ax  = rep(NA, n_ages * num_groups_per_core),
         sex = sex
       )$ex
     }
@@ -118,7 +108,7 @@ print(
 result <- unlist(result) # remove the chunking by flattening
 le <- result[seq(1, length(result), 19)] # le at birth is every 19th
 
-le <- split(le, ceiling(seq_along(le)/(n_locs*n_years))) # split into n_pd elements
+le <- split(le, ceiling(seq_along(le) / (n_locs * n_years)))
 
 # data frame of size n_strata, n_pd
 le <- data.frame(matrix(unlist(le), ncol = n_pd))
@@ -160,13 +150,13 @@ paste0("----- SAVING LIFE EXPECTANCY SAMPLES -----")
 if (!test) {
   write_csv(
     LE_df,
-    here::here("Output", "e0_samples", 
+    here::here("Output", "e0_samples",
     paste0(region, model, sex, "_e0_samples.csv"))
   )
 } else {
   write_csv(
     LE_df,
-    here::here("Output", "e0_samples", 
+    here::here("Output", "e0_samples",
     paste0(region, model, sex, "_T", "_e0_samples.csv"))
   )
 }

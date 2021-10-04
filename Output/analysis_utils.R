@@ -3,11 +3,11 @@ suppressPackageStartupMessages({
   library(stringr)
 })
 
-#' Function to stack chains from MCMC output by row for sample (if samples = TRUE)
-#' or samples2 (if samples = FALSE)
-stack_chains <- function(mcmc.out, samples = TRUE) {
-  n_chains <- length(mcmc.out)
-  
+#' Function to stack chains from MCMC output by row
+#' for sample (if samples = TRUE) or samples2 (if samples = FALSE)
+stack_chains <- function(chain_output, samples = TRUE) {
+  n_chains <- length(chain_output)
+
   stacked <- list()
   if (samples) {
     for (i in 1:n_chains) {
@@ -19,7 +19,7 @@ stack_chains <- function(mcmc.out, samples = TRUE) {
     }
   }
   stacked <- do.call(rbind, stacked)
-  
+
   return(stacked)
 }
 
@@ -39,18 +39,20 @@ summarise_samples <- function(samples) {
 unlograte <- function(df) {
   df$node <- rownames(df)
   rownames(df) <- c()
-  
+
   df <- df %>%
     mutate(
-      tmp1 = str_split_fixed(df$node, ",", n=3)[,1], # "lograte[a"
-      tmp2 = str_split_fixed(df$node, ",", n=3)[,2], # " s"
-      tmp3 = str_split_fixed(df$node, ",", n=3)[,3]  # " t]"
+      tmp1 = str_split_fixed(df$node, ",", n = 3)[, 1], # "lograte[a"
+      tmp2 = str_split_fixed(df$node, ",", n = 3)[, 2], # " s"
+      tmp3 = str_split_fixed(df$node, ",", n = 3)[, 3]  # " t]"
     )
 
   df <- df %>%
     mutate(
-      age_group.id = str_sub(str_split_fixed(df$tmp1, "[a-z]+", n=2)[,2],2), # a (had to remove "[")
-      YEAR.id      = str_sub(df$tmp3,2,-2) # a (had to remove first and last characters)
+      age_group.id = str_sub(
+        str_split_fixed(df$tmp1, "[a-z]+", n = 2)[, 2], 2
+      ), # a (remove "[")
+      YEAR.id      = str_sub(df$tmp3, 2, -2) # a (remove first and last)
     )
 
   df <- df %>%
@@ -60,5 +62,4 @@ unlograte <- function(df) {
       YEAR.id      = as.numeric(df$YEAR.id)
     ) %>%
     select(-c(node, tmp1, tmp2, tmp3))
-    
 }
