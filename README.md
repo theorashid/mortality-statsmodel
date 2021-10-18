@@ -1,6 +1,10 @@
 # mortality-statsmodel
 Mortality modelling using Bayesian hierarchical models and statistical machine learning methods.
 
+This code is used in
+
+Rashid, T., Bennett, J.E. et al. (2021). [Life expectancy and risk of death in 6791 communities in England from 2002 to 2019: high-resolution spatiotemporal analysis of civil registration data](https://www.thelancet.com/journals/lanpub/article/PIIS2468-2667(21)00205-X/fulltext). _The Lancet Public Health_.
+
 The parametric model code requires `R` version 3.6 or higher and the following packages:
 - `nimble` (>= 0.11.1)
 - `tidyverse`
