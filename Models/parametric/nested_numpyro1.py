@@ -1,5 +1,5 @@
 # %%
-from numpyro.primitives import sample
+from numpyro.infer.initialization import init_to_feasible, init_to_median, init_to_uniform
 import pandas as pd
 import numpy as np
 import numpyro
@@ -13,6 +13,7 @@ import arviz as az
 
 numpyro.set_platform("cpu")
 numpyro.set_host_device_count(2)
+# numpyro.enable_x64()
 
 # %%
 __author__ = "Theo Rashid"
@@ -48,6 +49,7 @@ reparam_config = {
         "alpha_s3",
         "beta_s3",
         "alpha_age_drift",
+        "beta_age_drift",
         "xi",
         "nu_drift",
         "gamma_drift"
@@ -147,31 +149,42 @@ def model(
         mu_logit = latent_rate[space, age, time]
         mu = numpyro.deterministic("mu", expit(mu_logit))
         numpyro.sample("deaths", dist.BetaBinomial(mu * theta, (1 - mu) * theta, population), obs=deaths)
-    print("xi")
-    print(xi)
-    print("nu")
-    print(nu)
-    print("gamma")
-    print(gamma)
 
 
 # %%
-nuts_kernel = NUTS(model)
+nuts_kernel = NUTS(model)#, init_strategy=init_to_feasible)
 rng_key = random.PRNGKey(0)
 
 # %%
+with numpyro.handlers.seed(rng_seed=1):
+    trace = numpyro.handlers.trace(model).get_trace(
+        age=data["age_id"].values,
+        space=data["hier3_id"].values,
+        time=data["year_id"].values,
+        lookup1=grid_lookup1["hier1_id"].values,
+        lookup2=grid_lookup2["hier2_id"].values,
+        population=data["population"].values,
+        deaths=data["deaths"].values,
+    )
+print(numpyro.util.format_shapes(trace))
+# %%
 prior = Predictive(nuts_kernel.model, num_samples=100)(
     rng_key,
+    age=data["age_id"].values,
+    space=data["hier3_id"].values,
+    time=data["year_id"].values,
+    lookup1=grid_lookup1["hier1_id"].values,
+    lookup2=grid_lookup2["hier2_id"].values,
     population=data["population"].values,
 )
 
 # check prior predictive death rates
-p = prior["pbar"]
+p = prior["mu"]
 az.plot_kde(p)
 
 
 # %%
-mcmc = MCMC(nuts_kernel, num_samples=20, num_warmup=10, num_chains=1)
+mcmc = MCMC(nuts_kernel, num_samples=100, num_warmup=100, num_chains=1)
 rng_key, rng_key_ = random.split(rng_key)
 mcmc.run(
     rng_key,
