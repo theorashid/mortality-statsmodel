@@ -21,15 +21,97 @@ __email__ = "tar15@ic.ac.uk"
 
 data = pd.read_csv("mortality_hf_ac_LSOA.csv")
 # %%
-data = data[data["sex"] == 1]
-data = data.assign(
-    year_id  = data["YEAR"].astype("category").cat.codes,
-    age_id   = data["age_group"].astype("category").cat.codes,
-    hier1_id = data["LAD2020"].astype("category").cat.codes,
-    hier2_id = data["MSOA2011"].astype("category").cat.codes,
-    hier3_id = data["LSOA2011"].astype("category").cat.codes,
-)
+# data = data[data["sex"] == 1]
+# data = data.assign(
+#     year_id  = data["YEAR"].astype("category").cat.codes,
+#     age_id   = data["age_group"].astype("category").cat.codes,
+#     hier1_id = data["LAD2020"].astype("category").cat.codes,
+#     hier2_id = data["MSOA2011"].astype("category").cat.codes,
+#     hier3_id = data["LSOA2011"].astype("category").cat.codes,
+# )
 
+# %%
+def get_data(
+    rng_key,
+    alpha0=-5.1,
+    beta0=-0.04,
+    sigma_alpha_age=1.0,
+    sigma_alpha_s1=0.15,
+    sigma_alpha_s2=0.15,
+    sigma_alpha_s3=0.16,
+    sigma_beta_age=0.003,
+    sigma_beta_s1=0.006,
+    sigma_beta_s2=0.003,
+    sigma_beta_s3=0.001,
+    sigma_gamma=0.028,
+    sigma_nu=0.063,
+    sigma_xi=0.26,
+    theta=1400
+):
+    data = pd.read_csv("mortality_hf_ac_LSOA.csv")
+    data = data[data["sex"] == 1]
+    data = data.assign(
+        year_id  = data["YEAR"].astype("category").cat.codes,
+        age_id   = data["age_group"].astype("category").cat.codes,
+        hier1_id = data["LAD2020"].astype("category").cat.codes,
+        hier2_id = data["MSOA2011"].astype("category").cat.codes,
+        hier3_id = data["LSOA2011"].astype("category").cat.codes,
+    )
+
+    N_s1 = len(np.unique(data["LAD2020"]))
+    N_s2 = len(np.unique(data["MSOA2011"]))
+    N_s3 = len(np.unique(data["LSOA2011"]))
+    N_age = len(np.unique(data["age_group"]))
+    N_t = len(np.unique(data["YEAR"]))
+
+    alpha_s1 = dist.Normal(0., sigma_alpha_s1).sample(rng_key, (N_s1,))
+    alpha_s2 = dist.Normal(0., sigma_alpha_s2).sample(rng_key, (N_s2,))
+    alpha_s3 = dist.Normal(0., sigma_alpha_s3).sample(rng_key, (N_s3,))
+    beta_s1 = dist.Normal(0., sigma_beta_s1).sample(rng_key, (N_s1,))
+    beta_s2 = dist.Normal(0., sigma_beta_s2).sample(rng_key, (N_s2,))
+    beta_s3 = dist.Normal(0., sigma_beta_s3).sample(rng_key, (N_s3,))
+    
+    alpha_age = dist.GaussianRandomWalk(scale=sigma_alpha_age, num_steps=(N_age-1)).sample(rng_key)
+    alpha_age = jnp.pad(alpha_age, (1,0))
+    beta_age = dist.GaussianRandomWalk(scale=sigma_beta_age, num_steps=(N_age-1)).sample(rng_key)
+    beta_age = jnp.pad(beta_age, (1,0))
+
+    xi = dist.Normal(0., sigma_xi).sample(random.PRNGKey(0), (N_age, N_s3))
+    nu = dist.GaussianRandomWalk(
+        scale=sigma_nu,
+        num_steps=(N_t-1)
+    ).sample(rng_key, (N_s3,))
+    nu = jnp.pad(nu, ((0, 0), (1, 0)))
+    gamma = dist.GaussianRandomWalk(
+        scale=sigma_gamma,
+        num_steps=(N_t-1)
+    ).sample(rng_key, (N_age,))
+    gamma = jnp.pad(gamma, ((0, 0), (1, 0)))
+
+    alpha = alpha0 + alpha_age[data["age_id"].values] + \
+        alpha_s1[data["hier1_id"].values] + \
+        alpha_s2[data["hier2_id"].values] + alpha_s3[data["hier3_id"].values]
+    beta = beta0 + beta_age[data["age_id"].values] + \
+        beta_s1[data["hier1_id"].values] + \
+        beta_s2[data["hier2_id"].values] + beta_s3[data["hier3_id"].values]
+
+    mu_logit = alpha + beta * data["year_id"].values
+    mu_logit += xi[data["age_id"].values, data["hier3_id"].values]
+    mu_logit += nu[data["hier3_id"].values, data["year_id"].values]
+    mu_logit += gamma[data["age_id"].values, data["year_id"].values]
+    mu = expit(mu_logit)
+
+    data["deaths"] = dist.BetaBinomial(
+        mu * theta,
+        (1 - mu) * theta,
+        data["population"].values
+    ).sample(rng_key)
+
+    return data
+
+# %%
+rng_key = random.PRNGKey(0)
+data = get_data(rng_key)
 # grid to match hier3 to hier2
 grid_lookup2 = data[["hier1_id", "hier2_id", "hier3_id"]].drop_duplicates()
 grid_lookup2 = grid_lookup2.sort_values(by="hier3_id")
@@ -37,7 +119,6 @@ grid_lookup2 = grid_lookup2.sort_values(by="hier3_id")
 # grid to match hier2 to hier1
 grid_lookup1 = grid_lookup2[["hier1_id", "hier2_id"]].drop_duplicates().sort_values(by="hier2_id")
 grid_lookup1 = grid_lookup1.sort_values(by="hier2_id")
-
 
 # %%
 reparam_config = {
@@ -153,7 +234,6 @@ def model(
 
 # %%
 nuts_kernel = NUTS(model)#, init_strategy=init_to_feasible)
-rng_key = random.PRNGKey(0)
 
 # %%
 with numpyro.handlers.seed(rng_seed=1):
@@ -167,6 +247,21 @@ with numpyro.handlers.seed(rng_seed=1):
         deaths=data["deaths"].values,
     )
 print(numpyro.util.format_shapes(trace))
+
+# %%
+numpyro.render_model(
+    model,
+    model_args=(
+        data["hier3_id"].values,
+        data["age_id"].values,
+        data["year_id"].values,
+        grid_lookup1["hier1_id"].values,
+        grid_lookup2["hier2_id"].values,
+        data["population"].values,
+        data["deaths"].values,
+    )
+)
+
 # %%
 prior = Predictive(nuts_kernel.model, num_samples=100)(
     rng_key,
@@ -184,7 +279,7 @@ az.plot_kde(p)
 
 
 # %%
-mcmc = MCMC(nuts_kernel, num_samples=100, num_warmup=100, num_chains=1)
+mcmc = MCMC(nuts_kernel, num_samples=500, num_warmup=500, num_chains=2)
 rng_key, rng_key_ = random.split(rng_key)
 mcmc.run(
     rng_key,
@@ -208,6 +303,6 @@ az.plot_forest(
 # %%
 az.plot_trace(
     fit,
-    var_names=("alpha", "theta"),
+    var_names=("sigma_xi", "theta"),
 )
 # %%
