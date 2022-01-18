@@ -132,8 +132,8 @@ def model(
     N = len(population)
     
     # plates
-    space_plate = numpyro.plate("space", N_s2, dim=-3)
-    age_plate = numpyro.plate("age_groups", N_age, dim=-2)
+    age_plate = numpyro.plate("age_groups", N_age, dim=-3)
+    space_plate = numpyro.plate("space", N_s2, dim=-2)
     year_plate = numpyro.plate("year", N_t - 1, dim=-1)
 
     # hyperparameters
@@ -149,7 +149,7 @@ def model(
     theta = numpyro.sample("theta", dist.Exponential(0.1))
 
     # spatial hierarchy
-    with numpyro.plate("s1", N_s1, dim=-3):
+    with numpyro.plate("s1", N_s1, dim=-2):
         alpha_s1 = numpyro.sample("alpha_s1", dist.Normal(0, sigma_alpha_s1))
         beta_s1 = numpyro.sample("beta_s1", dist.Normal(0, sigma_beta_s1))
     with space_plate:
@@ -165,7 +165,7 @@ def model(
             ),
             (1, 0),
             constant_values=100. # pad so first term is alpha0, the global intercept with prior N(0, 100)
-        )[:, jnp.newaxis]
+        )[:, jnp.newaxis, jnp.newaxis]
         alpha_age_drift = numpyro.sample("alpha_age_drift", dist.Normal(0, alpha_age_drift_scale))
         alpha_age = jnp.cumsum(alpha_age_drift, -2)
 
@@ -176,7 +176,7 @@ def model(
             ),
             (1, 0),
             constant_values=100.
-        )[:, jnp.newaxis]
+        )[:, jnp.newaxis, jnp.newaxis]
         beta_age_drift = numpyro.sample("beta_age_drift", dist.Normal(0, beta_age_drift_scale))
         beta_age = jnp.cumsum(beta_age_drift, -2)
     
@@ -187,12 +187,12 @@ def model(
     # space-time random walk
     with space_plate, year_plate:
         nu_drift = numpyro.sample("nu_drift", dist.Normal(beta_s3, sigma_nu))
-        nu = jnp.pad(jnp.cumsum(nu_drift, -1), [(0, 0), (0, 0), (1, 0)])
+        nu = jnp.pad(jnp.cumsum(nu_drift, -1), [(0, 0), (1, 0)])
 
     # age-time random walk
     with age_plate, year_plate:
         gamma_drift = numpyro.sample("gamma_drift", dist.Normal(beta_age, sigma_gamma))
-        gamma = jnp.pad(jnp.cumsum(gamma_drift, -1), [(0, 0), (1, 0)])
+        gamma = jnp.pad(jnp.cumsum(gamma_drift, -1), [(0, 0), (0, 0), (1, 0)])
     
     # likelihood
     latent_rate = xi + nu + gamma
