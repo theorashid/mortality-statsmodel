@@ -153,8 +153,8 @@ def model(
         alpha_s1 = numpyro.sample("alpha_s1", dist.Normal(0, sigma_alpha_s1))
         beta_s1 = numpyro.sample("beta_s1", dist.Normal(0, sigma_beta_s1))
     with space_plate:
-        alpha_s3 = numpyro.sample("alpha_s2", dist.Normal(alpha_s1[lookup], sigma_alpha_s2))
-        beta_s3 = numpyro.sample("beta_s2", dist.Normal(beta_s1[lookup], sigma_beta_s2))
+        alpha_s2 = numpyro.sample("alpha_s2", dist.Normal(alpha_s1[lookup], sigma_alpha_s2))
+        beta_s2 = numpyro.sample("beta_s2", dist.Normal(beta_s1[lookup], sigma_beta_s2))
 
     # age
     with age_plate:
@@ -182,11 +182,11 @@ def model(
     
     # age-space interactions
     with age_plate, space_plate:
-        xi = numpyro.sample("xi", dist.Normal(alpha_age + alpha_s3, sigma_xi))
+        xi = numpyro.sample("xi", dist.Normal(alpha_age + alpha_s2, sigma_xi))
     
     # space-time random walk
     with space_plate, year_plate:
-        nu_drift = numpyro.sample("nu_drift", dist.Normal(beta_s3, sigma_nu))
+        nu_drift = numpyro.sample("nu_drift", dist.Normal(beta_s2, sigma_nu))
         nu = jnp.pad(jnp.cumsum(nu_drift, -1), [(0, 0), (1, 0)])
 
     # age-time random walk
