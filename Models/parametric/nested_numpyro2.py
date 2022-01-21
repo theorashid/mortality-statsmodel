@@ -167,7 +167,7 @@ def model(
             constant_values=100. # pad so first term is alpha0, the global intercept with prior N(0, 100)
         )[:, jnp.newaxis, jnp.newaxis]
         alpha_age_drift = numpyro.sample("alpha_age_drift", dist.Normal(0, alpha_age_drift_scale))
-        alpha_age = jnp.cumsum(alpha_age_drift, -2)
+        alpha_age = jnp.cumsum(alpha_age_drift, -3)
 
         beta_age_drift_scale = jnp.pad(
             jnp.broadcast_to(
@@ -178,7 +178,7 @@ def model(
             constant_values=100.
         )[:, jnp.newaxis, jnp.newaxis]
         beta_age_drift = numpyro.sample("beta_age_drift", dist.Normal(0, beta_age_drift_scale))
-        beta_age = jnp.cumsum(beta_age_drift, -2)
+        beta_age = jnp.cumsum(beta_age_drift, -3)
     
     # age-space interactions
     with age_plate, space_plate:
