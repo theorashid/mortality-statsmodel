@@ -22,6 +22,7 @@ from numpyro.infer import MCMC, NUTS
 from numpyro.infer.reparam import LocScaleReparam
 
 DATA_DIR = "Data/Mortality/"
+OUTPUT_DIR = "OUTPUT/"
 
 
 def load_data(data_dir="", name="LSOA_male_"):
@@ -214,7 +215,7 @@ def main(args):
 	rng_key = random.PRNGKey(args.rng_seed)
 	samples = run_inference(model, a, s3, t, lookup12, lookup23, population, deaths, rng_key, args)
 
-	az.to_netcdf(az.from_dict(samples), model_name + ".nc")
+	az.to_netcdf(az.from_dict(samples), OUTPUT_DIR + model_name + ".nc")
 
 
 if __name__ == "__main__":
