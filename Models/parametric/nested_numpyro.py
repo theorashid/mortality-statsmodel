@@ -24,24 +24,31 @@ from numpyro.infer.reparam import LocScaleReparam
 DATA_DIR = "Data/Mortality/"
 
 
-def load_data(data_dir=""):
-	a = np.load(data_dir + "LSOA_hf_a.npy")
-	s1 = np.load(data_dir + "LSOA_hf_s1.npy")
-	s2 = np.load(data_dir + "LSOA_hf_s2.npy")
-	t = np.load(data_dir + "LSOA_hf_t.npy")
-	deaths = np.load(data_dir + "LSOA_hf_deaths.npy")
-	population = np.load(data_dir + "LSOA_hf_population.npy")
-	return a, s1, s2, t, deaths, population
+def load_data(data_dir="", name="LSOA_male_"):
+	a = np.load(data_dir + name + "_a.npy")
+	s1 = np.load(data_dir + name + "_s1.npy")
+	s2 = np.load(data_dir + name + "_s2.npy")
+	s3 = np.load(data_dir + name + "_s3.npy")
+	t = np.load(data_dir + name + "_t.npy")
+	deaths = np.load(data_dir + name + "_deaths.npy")
+	population = np.load(data_dir + name + "_population.npy")
+	return a, s1, s2, s3, t, deaths, population
 
 
-def create_lookup(s1, s2):
+def create_lookup(s1, s2, s3):
 	"""
-	Create a map between s1 indices and unique s2 indices
+	Create map between:
+		- s1 indices and unique s2 indices
+		- s2 indices and unique s3 indices
 	"""
-	lookup = np.column_stack([s1, s2])
-	lookup = np.unique(lookup, axis=0)
-	lookup = lookup[lookup[:, 1].argsort()]
-	return lookup[:, 0]
+	lookup12 = np.column_stack([s1, s2])
+	lookup12 = np.unique(lookup12, axis=0)
+	lookup12 = lookup12[lookup12[:, 1].argsort()]
+
+	lookup23 = np.column_stack([s2, s3])
+	lookup23 = np.unique(lookup23, axis=0)
+	lookup23 = lookup23[lookup23[:, 1].argsort()]
+	return lookup12[:, 0], lookup23[:, 0]
 
 
 reparam_config = {
@@ -49,9 +56,11 @@ reparam_config = {
 	for k in [
 		"alpha_s1",
 		"alpha_s2",
+		"alpha_s3",
 		"alpha_age_drift",
 		"beta_s1",
 		"beta_s2",
+		"beta_s3",
 		"beta_age_drift",
 		"xi",
 		"nu_drift",
@@ -61,24 +70,27 @@ reparam_config = {
 
 
 @numpyro.handlers.reparam(config=reparam_config)
-def model(age, space, time, lookup, population, deaths=None):
-	N_s1 = len(np.unique(lookup))
-	N_s2 = len(np.unique(space))
+def model(age, space, time, lookup12, lookup23, population, deaths=None):
+	N_s1 = len(np.unique(lookup12))
+	N_s2 = len(np.unique(lookup23))
+	N_s3 = len(np.unique(space))
 	N_age = len(np.unique(age))
 	N_t = len(np.unique(time))
 	N = len(population)
 
 	# plates
 	age_plate = numpyro.plate("age_groups", N_age, dim=-3)
-	space_plate = numpyro.plate("space", N_s2, dim=-2)
+	space_plate = numpyro.plate("space", N_s3, dim=-2)
 	year_plate = numpyro.plate("year", N_t - 1, dim=-1)
 
 	# hyperparameters
 	sigma_alpha_s1 = numpyro.sample("sigma_alpha_s1", dist.HalfNormal(1.0))
 	sigma_alpha_s2 = numpyro.sample("sigma_alpha_s2", dist.HalfNormal(1.0))
+	sigma_alpha_s3 = numpyro.sample("sigma_alpha_s3", dist.HalfNormal(1.0))
 	sigma_alpha_age = numpyro.sample("sigma_alpha_age", dist.HalfNormal(1.0))
 	sigma_beta_s1 = numpyro.sample("sigma_beta_s1", dist.HalfNormal(1.0))
 	sigma_beta_s2 = numpyro.sample("sigma_beta_s2", dist.HalfNormal(1.0))
+	sigma_beta_s3 = numpyro.sample("sigma_beta_s3", dist.HalfNormal(1.0))
 	sigma_beta_age = numpyro.sample("sigma_beta_age", dist.HalfNormal(1.0))
 	sigma_xi = numpyro.sample("sigma_xi", dist.HalfNormal(1.0))
 	sigma_nu = numpyro.sample("sigma_nu", dist.HalfNormal(1.0))
@@ -89,12 +101,21 @@ def model(age, space, time, lookup, population, deaths=None):
 	with numpyro.plate("s1", N_s1, dim=-2):
 		alpha_s1 = numpyro.sample("alpha_s1", dist.Normal(0, sigma_alpha_s1))
 		beta_s1 = numpyro.sample("beta_s1", dist.Normal(0, sigma_beta_s1))
-	with space_plate:
+
+	with numpyro.plate("s2", N_s2, dim=-2):
 		alpha_s2 = numpyro.sample(
-			"alpha_s2", dist.Normal(alpha_s1[lookup], sigma_alpha_s2)
+			"alpha_s2", dist.Normal(alpha_s1[lookup12], sigma_alpha_s2)
 		)
 		beta_s2 = numpyro.sample(
-			"beta_s2", dist.Normal(beta_s1[lookup], sigma_beta_s2)
+			"beta_s2", dist.Normal(beta_s1[lookup12], sigma_beta_s2)
+		)
+
+	with space_plate:
+		alpha_s3 = numpyro.sample(
+			"alpha_s3", dist.Normal(alpha_s2[lookup23], sigma_alpha_s3)
+		)
+		beta_s3 = numpyro.sample(
+			"beta_s3", dist.Normal(beta_s2[lookup23], sigma_beta_s3)
 		)
 
 	# age
@@ -119,11 +140,11 @@ def model(age, space, time, lookup, population, deaths=None):
 
 	# age-space interactions
 	with age_plate, space_plate:
-		xi = numpyro.sample("xi", dist.Normal(alpha_age + alpha_s2, sigma_xi))
+		xi = numpyro.sample("xi", dist.Normal(alpha_age + alpha_s3, sigma_xi))
 
 	# space-time random walk
 	with space_plate, year_plate:
-		nu_drift = numpyro.sample("nu_drift", dist.Normal(beta_s2, sigma_nu))
+		nu_drift = numpyro.sample("nu_drift", dist.Normal(beta_s3, sigma_nu))
 		nu = jnp.pad(jnp.cumsum(nu_drift, -1), [(0, 0), (1, 0)])
 
 	# age-time random walk
@@ -134,29 +155,30 @@ def model(age, space, time, lookup, population, deaths=None):
 	# likelihood
 	latent_rate = numpyro.deterministic("latent_rate", xi + nu + gamma)
 	with numpyro.plate("N", N):
-		mu_logit = latent_rate[age, space, time]
-		numpyro.sample("deaths", dist.Binomial(population, logits=mu_logit), obs=deaths)
-		# mu = numpyro.deterministic("mu", expit(latent_rate[age, space, time]))
-		# numpyro.sample(
-		# 	"deaths",
-		# 	dist.BetaBinomial(mu * theta, (1 - mu) * theta, population),
-		# 	obs=deaths,
-		# )
+		# mu_logit = latent_rate[age, space, time]
+		# numpyro.sample("deaths", dist.Binomial(population, logits=mu_logit), obs=deaths)
+		mu = expit(latent_rate[age, space, time])
+		numpyro.sample(
+			"deaths",
+			dist.BetaBinomial(mu * theta, (1 - mu) * theta, population),
+			obs=deaths,
+		)
 
 
-def print_model_shape(model, age, space, time, lookup, population):
+def print_model_shape(model, age, space, time, lookup12, lookup23, population):
 	with numpyro.handlers.seed(rng_seed=1):
 		trace = numpyro.handlers.trace(model).get_trace(
 			age=age,
 			space=space,
 			time=time,
-			lookup=lookup,
+			lookup12=lookup12,
+			lookup23=lookup23,
 			population=population,
 		)
 	print(numpyro.util.format_shapes(trace))
 
 
-def run_inference(model, age, space, time, lookup, population, deaths, rng_key, args):
+def run_inference(model, age, space, time, lookup12, lookup23, population, deaths, rng_key, args):
 	kernel = NUTS(model)
 	mcmc = MCMC(
 		kernel,
@@ -165,31 +187,42 @@ def run_inference(model, age, space, time, lookup, population, deaths, rng_key, 
 		num_chains=args.num_chains,
 		progress_bar=False if "NUMPYRO_SPHINXBUILD" in os.environ else True,
 	)
-	mcmc.run(rng_key, age, space, time, lookup, population, deaths)
+	mcmc.run(rng_key, age, space, time, lookup12, lookup23, population, deaths)
 	# mcmc.print_summary()
 	return mcmc.get_samples(group_by_chain=True)
 
 
 def main(args):
-	print("Fetching data...")
-	a, s1, s2, t, deaths, population = load_data(data_dir=DATA_DIR)
+	name = "{}_{}".format(args.region, args.sex)
+	model_name = name + "_nested"
+	print(model_name)
 
-	lookup = create_lookup(s1, s2)
+	print("Fetching data...")
+	a, s1, s2, s3, t, deaths, population = load_data(data_dir=DATA_DIR, name=name)
+
+	lookup12, lookup23 = create_lookup(s1, s2, s3)
+
+	print(lookup12.shape)
+	print(lookup12)
+	print(lookup23.shape)
+	print(lookup23)
 
 	print("Model shape:")
-	print_model_shape(model, a, s2, t, lookup, population)
+	print_model_shape(model, a, s3, t, lookup12, lookup23, population)
 
 	print("Starting inference...")
 	rng_key = random.PRNGKey(args.rng_seed)
-	samples = run_inference(model, a, s2, t, lookup, population, deaths, rng_key, args)
+	samples = run_inference(model, a, s3, t, lookup12, lookup23, population, deaths, rng_key, args)
 
-	az.to_netcdf(az.from_dict(samples), "posterior.nc")
+	az.to_netcdf(az.from_dict(samples), model_name + ".nc")
 
 
 if __name__ == "__main__":
 	assert numpyro.__version__.startswith("0.9.2")
 
 	parser = argparse.ArgumentParser(description="Mortality regression model")
+	parser.add_argument("--region", default="LSOA", type=str, help='"LSOA" or "MSOA".')
+	parser.add_argument("--sex", default="male", type=str, help='"male" or "female".')
 	parser.add_argument("-n", "--num-samples", nargs="?", default=500, type=int)
 	parser.add_argument("--num-warmup", nargs="?", default=200, type=int)
 	parser.add_argument("--num-chains", nargs="?", default=1, type=int)
