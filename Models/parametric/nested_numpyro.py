@@ -203,11 +203,6 @@ def main(args):
 
 	lookup12, lookup23 = create_lookup(s1, s2, s3)
 
-	print(lookup12.shape)
-	print(lookup12)
-	print(lookup23.shape)
-	print(lookup23)
-
 	print("Model shape:")
 	print_model_shape(model, a, s3, t, lookup12, lookup23, population)
 
