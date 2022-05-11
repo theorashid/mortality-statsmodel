@@ -12,6 +12,7 @@ import os
 import numpy as np
 import arviz as az
 
+import jax
 from jax import random
 import jax.numpy as jnp
 from jax.scipy.special import expit
@@ -22,7 +23,7 @@ from numpyro.infer import MCMC, NUTS
 from numpyro.infer.reparam import LocScaleReparam
 
 DATA_DIR = "Data/Mortality/"
-OUTPUT_DIR = "OUTPUT/"
+OUTPUT_DIR = "Output/"
 
 
 def load_data(data_dir="", name="LSOA_male_"):
@@ -186,6 +187,7 @@ def run_inference(model, age, space, time, lookup12, lookup23, population, death
 		num_warmup=args.num_warmup,
 		num_samples=args.num_samples,
 		num_chains=args.num_chains,
+		chain_method=args.chain_method,
 		progress_bar=False if "NUMPYRO_SPHINXBUILD" in os.environ else True,
 	)
 	mcmc.run(rng_key, age, space, time, lookup12, lookup23, population, deaths)
@@ -210,6 +212,9 @@ def main(args):
 	rng_key = random.PRNGKey(args.rng_seed)
 	samples = run_inference(model, a, s3, t, lookup12, lookup23, population, deaths, rng_key, args)
 
+	if args.devices == "gpu":
+		jax.device_get(samples)
+
 	az.to_netcdf(az.from_dict(samples), OUTPUT_DIR + model_name + ".nc")
 
 
@@ -222,6 +227,9 @@ if __name__ == "__main__":
 	parser.add_argument("-n", "--num-samples", nargs="?", default=500, type=int)
 	parser.add_argument("--num-warmup", nargs="?", default=200, type=int)
 	parser.add_argument("--num-chains", nargs="?", default=1, type=int)
+	parser.add_argument(
+		"--chain-method", default="parallel", type=str, help='"parallel", "sequential" or "vectorized"'
+	)
 	parser.add_argument("--device", default="cpu", type=str, help='use "cpu" or "gpu".')
 	parser.add_argument(
 		"--rng_seed", default=1, type=int, help="random number generator seed"
@@ -229,6 +237,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	numpyro.set_platform(args.device)
+	numpyro.set_host_device_count(args.num_chains)
 	numpyro.enable_x64()
 
 	main(args)
