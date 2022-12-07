@@ -1,13 +1,3 @@
-# # EXAMPLE USAGE
-# mxE11 <- exp(-5.5 + c(0,-2.9,-3,-2.9,-1.8,-1.7,-1.7,-1.6,-1.4,-.8,-.2,.3,1.0,1.5,1.9,2.4,2.8,3.4,3.8))
-# mxE22 <- c(0.1, 0.2, 0.1, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.03, 0.04, 0.5, 0.6, 0.7, 0.9, 0.9)
-# mxE33 <- c(0.11, 0.2, 0.1, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.03, 0.04, 0.5, 0.6, 0.7, 0.9, 0.9)
-#
-# Rprof(tmp <- tempfile())
-# PeriodLifeTable(mx=rep(c(mxE11,mxE22,mxE33), 200), age=rep(c(c(0,1), seq(5, 85, 5)),600),ax=rep(rep(NA,19),600),sex = 1, full.table=TRUE)
-# Rprof()
-# summaryRprof(tmp)
-
 .KTExtension <- function(lx70) {
 	# lx70: lx for 70 and older (should have 4 rows - one for each age group
 	# 70-74, 75-79, 80-84, 85+ and as many columns as years)
