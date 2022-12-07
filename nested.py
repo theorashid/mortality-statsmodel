@@ -1,17 +1,12 @@
-"""
-Modelling mortality over space and time
-=======================================
+"""Modelling mortality over space and time
 
 Three-tier mortality model with beta-binomial likelihood.
-
 """
 
 import argparse
-import logging
 import os
 import pickle
 
-import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -19,16 +14,6 @@ import numpyro.distributions as dist
 from jax import random
 from numpyro.infer import MCMC, NUTS
 from numpyro.infer.reparam import LocScaleReparam
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter("%(asctime)s:%(message)s")
-
-print = logger.info
-
-DATA_DIR = "/home/tar15/mortality-numpyro/data/"
-OUTPUT_DIR = "/home/tar15/mortality-numpyro/output/"
 
 
 def load_data(data_dir="", region="LSOA", sex="male"):
@@ -45,8 +30,8 @@ def load_data(data_dir="", region="LSOA", sex="male"):
 def create_lookup(s1, s2, s3):
     """
     Create map between:
-            - s1 indices and unique s2 indices
-            - s2 indices and unique s3 indices
+        - s1 indices and unique s2 indices
+        - s2 indices and unique s3 indices
     """
     lookup12 = np.column_stack([s1, s2])
     lookup12 = np.unique(lookup12, axis=0)
@@ -159,19 +144,6 @@ def model(age, space, time, lookup12, lookup23, population, deaths=None):
         numpyro.sample("deaths", dist.Binomial(population, logits=mu_logit), obs=deaths)
 
 
-def print_model_shape(model, age, space, time, lookup12, lookup23, population):
-    with numpyro.handlers.seed(rng_seed=1):
-        trace = numpyro.handlers.trace(model).get_trace(
-            age=age,
-            space=space,
-            time=time,
-            lookup12=lookup12,
-            lookup23=lookup23,
-            population=population,
-        )
-    print(numpyro.util.format_shapes(trace))
-
-
 def run_inference(
     model, age, space, time, lookup12, lookup23, population, deaths, rng_key, args
 ):
@@ -183,7 +155,7 @@ def run_inference(
         num_chains=args.num_chains,
         thinning=args.thin,
         chain_method=args.chain_method,
-        progress_bar=False if "NUMPYRO_SPHINXBUILD" in os.environ else True,
+        progress_bar=True,
     )
     mcmc.run(rng_key, age, space, time, lookup12, lookup23, population, deaths)
     # mcmc.print_summary()
@@ -195,27 +167,20 @@ def run_inference(
 
 
 def main(args):
-    model_name = name + "_nested_as_at"
-    logger.info(model_name)
+    model_name = "{}_{}_{}".format(args.region, args.sex, "_nested_as_at")
 
-    logger.info("Fetching data...")
-    a, s1, s2, s3, t, deaths, population = load_data(
-        data_dir=DATA_DIR, region=args.region, sex=args.sex
-    )
+    print("Fetching data...")
+    a, s1, s2, s3, t, deaths, population = load_data(region=args.region, sex=args.sex)
 
     lookup12, lookup23 = create_lookup(s1, s2, s3)
 
-    if args.device != "gpu":
-        logger.info("Model shape:")
-        print_model_shape(model, a, s3, t, lookup12, lookup23, population)
-
-    logger.info("Starting inference...")
+    print("Starting inference...")
     rng_key = random.PRNGKey(args.rng_seed)
     samples = run_inference(
         model, a, s3, t, lookup12, lookup23, population, deaths, rng_key, args
     )
 
-    with open(OUTPUT_DIR + model_name + ".pkl", "wb+") as f:
+    with open(model_name + ".pkl", "wb+") as f:
         pickle.dump(dict([key, np.array(value)] for key, value in samples.items()), f)
         f.close()
 
@@ -246,16 +211,5 @@ if __name__ == "__main__":
     numpyro.set_host_device_count(args.num_chains)
 
     numpyro.enable_x64()
-
-    name = "{}_{}".format(args.region, args.sex)
-
-    fh = logging.FileHandler(r"{}.log".format(name), "w+")
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-
-    logger.info(jax.devices())
-    logger.info(jax.local_device_count())
-    logger.info(jax.device_count(args.device))
 
     main(args)

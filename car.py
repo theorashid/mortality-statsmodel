@@ -1,17 +1,12 @@
-"""
-Modelling mortality over space and time
-=======================================
+"""Modelling mortality over space and time
 
-CAR mortality model with binomial likelihood.
-
+ICAR mortality model with binomial likelihood.
 """
 
 import argparse
-import logging
 import os
 import pickle
 
-import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -20,63 +15,13 @@ from jax import random
 from numpyro.infer import MCMC, NUTS
 from numpyro.infer.reparam import LocScaleReparam
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter("%(asctime)s:%(message)s")
-
-print = logger.info
-
-DATA_DIR = "/home/tar15/mortality-numpyro/data/"
-OUTPUT_DIR = "/home/tar15/mortality-numpyro/output/"
-
-causes_female = [
-    "All_other_CVD",
-    "All_other_NCD",
-    "All_other_cancers",
-    "All_other_infections_maternal_perinatal_and_nutritional_conditions",
-    "Alzheimer_and_other_dementias",
-    "Breast_cancer",
-    "Cerebrovascular_disease",
-    "Chronic_obstructive_pulmonary_disease",
-    "Colon_and_rectum_cancers",
-    "Diabetes_mellitus_nephritis_and_nephrosis",
-    "External_causes",
-    "Ischaemic_heart_disease",
-    "Lower_respiratory_infections",
-    "Lymphomas_multiple_myeloma",
-    "Ovary_cancer",
-    "Pancreas_cancer",
-    "Trachea_bronchus_lung_cancers",
-]
-
-causes_male = [
-    "All_other_CVD",
-    "All_other_NCD",
-    "All_other_cancers",
-    "All_other_infections_maternal_perinatal_and_nutritional_conditions",
-    "Alzheimer_and_other_dementias",
-    "Cerebrovascular_disease",
-    "Chronic_obstructive_pulmonary_disease",
-    "Cirrhosis_of_the_liver",
-    "Colon_and_rectum_cancers",
-    "Diabetes_mellitus_nephritis_and_nephrosis",
-    "External_causes",
-    "Ischaemic_heart_disease",
-    "Lower_respiratory_infections",
-    "Lymphomas_multiple_myeloma",
-    "Oesophagus_cancer",
-    "Prostate_cancer",
-    "Trachea_bronchus_lung_cancers",
-]
-
-
-def load_data(data_dir="", cause="", region="LAD", sex="male"):
+def load_data(data_dir="", region="LAD", sex="male"):
     a = np.load(data_dir + region + "_" + "a.npy")
     s = np.load(data_dir + region + "_" + "s.npy")
     t = np.load(data_dir + region + "_" + "t.npy")
     adj = np.load(data_dir + region + "_" + "adj.npy")
-    deaths = np.load(data_dir + region + "_" + sex + "_" + "deaths_" + cause + ".npy")
+    deaths = np.load(data_dir + region + "_" + sex + "_" + "deaths_" + ".npy")
     population = np.load(data_dir + region + "_" + sex + "_" + "population.npy")
     return a, s, t, adj, deaths, population
 
@@ -119,7 +64,7 @@ def model(age, space, time, adj, population, deaths=None):
         "alpha_s_raw",
         dist.CAR(
             loc=0.0,
-            correlation=0.99,
+            correlation=0.99,  # effectively ICAR
             conditional_precision=1.0,
             adj_matrix=adj,
             is_sparse=True,
@@ -175,18 +120,6 @@ def model(age, space, time, adj, population, deaths=None):
         numpyro.sample("deaths", dist.Binomial(population, logits=mu_logit), obs=deaths)
 
 
-def print_model_shape(model, age, space, time, adj, population):
-    with numpyro.handlers.seed(rng_seed=1):
-        trace = numpyro.handlers.trace(model).get_trace(
-            age=age,
-            space=space,
-            time=time,
-            adj=adj,
-            population=population,
-        )
-    print(numpyro.util.format_shapes(trace))
-
-
 def run_inference(model, age, space, time, adj, population, deaths, rng_key, args):
     kernel = NUTS(model)
     mcmc = MCMC(
@@ -208,32 +141,16 @@ def run_inference(model, age, space, time, adj, population, deaths, rng_key, arg
 
 
 def main(args):
-    model_name = name + "_car_as_at"
-    logger.info(model_name)
+    model_name = "{}_{}_{}".format(args.region, args.sex, "_car_as_at")
 
-    cause_id = int(args.cause) - 1
-    if args.sex == "female":
-        cause = causes_female[cause_id]
-    else:
-        cause = causes_male[cause_id]
+    print("Fetching data...")
+    a, s, t, adj, deaths, population = load_data(region=args.region, sex=args.sex)
 
-    cause_name = str(cause_id) + "_" + cause
-    logger.info(cause_name)
-
-    logger.info("Fetching data...")
-    a, s, t, adj, deaths, population = load_data(
-        data_dir=DATA_DIR, cause=cause_name, region=args.region, sex=args.sex
-    )
-
-    if args.device != "gpu":
-        logger.info("Model shape:")
-        print_model_shape(model, a, s, t, adj, population)
-
-    logger.info("Starting inference...")
+    print("Starting inference...")
     rng_key = random.PRNGKey(args.rng_seed)
     samples = run_inference(model, a, s, t, adj, population, deaths, rng_key, args)
 
-    with open(OUTPUT_DIR + model_name + "_" + cause_name + ".pkl", "wb+") as f:
+    with open(model_name + ".pkl", "wb+") as f:
         pickle.dump(dict([key, np.array(value)] for key, value in samples.items()), f)
         f.close()
 
@@ -267,14 +184,5 @@ if __name__ == "__main__":
     numpyro.enable_x64()
 
     name = "{}_{}".format(args.region, args.sex)
-
-    fh = logging.FileHandler(r"{}.log".format(name), "w+")
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-
-    logger.info(jax.devices())
-    logger.info(jax.local_device_count())
-    logger.info(jax.device_count(args.device))
 
     main(args)
