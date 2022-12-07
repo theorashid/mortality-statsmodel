@@ -19,7 +19,7 @@ run_MCMC_allcode <- function(
 ) {
   library(nimble)
   library(dplyr)
-  
+
   # ----- BUILD THE MODEL -----
   # Indices:
   # - a -- age
@@ -28,7 +28,7 @@ run_MCMC_allcode <- function(
   if (model_name == "BYM") {
     code <- nimbleCode({
       # Theo AO Rashid -- October 2020
-      
+
       # ----- BYM model -----
       # Negative binomial likelihood
       #
@@ -39,13 +39,13 @@ run_MCMC_allcode <- function(
       # Age random walk +
       # Space random walk
       # --------------------
-      
+
       # PRIORS
-      
+
       # COMMON TERMS
       alpha0 ~ dnorm(0, 0.00001)
       beta0  ~ dnorm(0, 0.00001)
-      
+
       # AREA TERMS -- BYM priors
       # No hierarchy
       # Structured intercept and slope with a CAR prior
@@ -62,7 +62,7 @@ run_MCMC_allcode <- function(
       tau_beta_u <- pow(sigma_beta_u,-2)
       sigma_alpha_v ~ dunif(0,2)
       sigma_beta_v ~ dunif(0,2)
-      
+
       # AGE TERMS
       alpha_age[1] <- alpha0 # initialise first terms for RW
       beta_age[1]  <- beta0
@@ -72,7 +72,7 @@ run_MCMC_allcode <- function(
       }
       sigma_alpha_age ~ dunif(0,2)
       sigma_beta_age ~ dunif(0,2)
-      
+
       # INTERACTIONS
       # age-space interactions
       for(a in 1:N_age_groups) {
@@ -81,7 +81,7 @@ run_MCMC_allcode <- function(
         }
       }
       sigma_xi ~ dunif(0,2)
-      
+
       # space-time random walk
       for(s in 1:N_space){
         nu[s, 1] <- 0
@@ -90,7 +90,7 @@ run_MCMC_allcode <- function(
         }
       }
       sigma_nu ~ dunif(0,2)
-      
+
       # age-time random walk
       for(a in 1:N_age_groups){
         gamma[a, 1] <- 0
@@ -100,7 +100,7 @@ run_MCMC_allcode <- function(
       }
       sigma_gamma ~ dunif(0,2)
 
-      
+
       # Put all parameters together into indexed lograte term
       for(a in 1:N_age_groups) {
         for(s in 1:N_space) {
@@ -109,7 +109,7 @@ run_MCMC_allcode <- function(
           }
         }
       }
-      
+
       # LIKELIHOOD
       # N total number of cells, i.e. ages*years*areas(*sex)
       for (i in 1:N) {
@@ -121,7 +121,7 @@ run_MCMC_allcode <- function(
       }
       r ~ dunif(0,50)
     })
-    
+
     specific_constants <- list(
       L       = length(inputs$adj),
       # inputs = nbInfo
@@ -138,7 +138,7 @@ run_MCMC_allcode <- function(
       sigma_alpha_v = 0.1,
       sigma_beta_v  = 0.01
     )
-    
+
     specific_sigmas <- c(
       "sigma_alpha_u", "sigma_beta_u",
       "sigma_alpha_v", "sigma_beta_v"
@@ -148,11 +148,11 @@ run_MCMC_allcode <- function(
       "alpha_u", "alpha_v",
       "beta_u", "beta_v"
     )
-    
+
   } else if (model_name == "nested") {
     code <- nimbleCode({
       # Theo AO Rashid -- October 2020
-      
+
       # ----- Nested model -----
       # Three tier nested hierarchy
       # Negative binomial likelihood
@@ -168,16 +168,16 @@ run_MCMC_allcode <- function(
       #
       # Designed for the ONS hierarchy LSOA -> MSOA -> LAD / MSOA -> LAD -> Region (3 -> 2 -> 1)
       # --------------------
-      
+
       # PRIORS
-      
+
       # COMMON TERMS
       alpha0 ~ dnorm(0, 0.00001)
       beta0  ~ dnorm(0, 0.00001)
-      
+
       # AREA TERMS -- random effects for intercepts and slopes
       # Lower level term centred on higher level
-      
+
       # tier 1 terms
       for(s1 in 1:N_s1){
         alpha_s1[s1] ~ dnorm(0, sd = sigma_alpha_s1)
@@ -185,7 +185,7 @@ run_MCMC_allcode <- function(
       }
       sigma_alpha_s1 ~ dunif(0,2)
       sigma_beta_s1  ~ dunif(0,2)
-      
+
       # tier 2 terms
       for(s2 in 1:N_s2){
         alpha_s2[s2] ~ dnorm(alpha_s1[grid.lookup.s2[s2, 2]], sd = sigma_alpha_s2) # centred on s1 terms
@@ -193,7 +193,7 @@ run_MCMC_allcode <- function(
       }
       sigma_alpha_s2 ~ dunif(0,2)
       sigma_beta_s2  ~ dunif(0,2)
-      
+
       # tier 3 terms
       for(s in 1:N_space){ # s = s3, N_space = N_s3
         alpha_s3[s] ~ dnorm(alpha_s2[grid.lookup[s, 2]], sd = sigma_alpha_s3) # centred on s2 terms
@@ -201,7 +201,7 @@ run_MCMC_allcode <- function(
       }
       sigma_alpha_s3 ~ dunif(0,2)
       sigma_beta_s3  ~ dunif(0,2)
-      
+
       # AGE TERMS
       alpha_age[1] <- alpha0 # initialise first terms for RW
       beta_age[1]  <- beta0
@@ -211,7 +211,7 @@ run_MCMC_allcode <- function(
       }
       sigma_alpha_age ~ dunif(0,2)
       sigma_beta_age ~ dunif(0,2)
-      
+
       # INTERACTIONS
       # age-space interactions
       for(a in 1:N_age_groups) {
@@ -220,7 +220,7 @@ run_MCMC_allcode <- function(
         }
       }
       sigma_xi ~ dunif(0,2)
-      
+
       # space-time random walk
       for(s in 1:N_space){
         nu[s, 1] <- 0
@@ -229,7 +229,7 @@ run_MCMC_allcode <- function(
         }
       }
       sigma_nu ~ dunif(0,2)
-      
+
       # age-time random walk
       for(a in 1:N_age_groups){
         gamma[a, 1] <- 0
@@ -238,7 +238,7 @@ run_MCMC_allcode <- function(
         }
       }
       sigma_gamma ~ dunif(0,2)
-      
+
       # Put all parameters together into indexed lograte term
       for(a in 1:N_age_groups) {
         for(s in 1:N_space) {
@@ -247,7 +247,7 @@ run_MCMC_allcode <- function(
           }
         }
       }
-      
+
       # LIKELIHOOD
       # N total number of cells, i.e. ages*years*areas(*sex)
       for (i in 1:N) {
@@ -259,7 +259,7 @@ run_MCMC_allcode <- function(
       }
       r ~ dunif(0,50)
     })
-    
+
     specific_constants <- list(
       N_s1           = max(mortdata$hier1.id),
       N_s2           = max(mortdata$hier2.id),
@@ -270,14 +270,14 @@ run_MCMC_allcode <- function(
     specific_inits <- list(
       alpha_s3       = init_vals$space.intercepts,
       beta_s3        = init_vals$space.slopes,
-      sigma_alpha_s1 = 0.1, 
+      sigma_alpha_s1 = 0.1,
       sigma_beta_s1  = 0.01,
-      sigma_alpha_s2 = 0.1, 
+      sigma_alpha_s2 = 0.1,
       sigma_beta_s2  = 0.01,
-      sigma_alpha_s3 = 0.1, 
+      sigma_alpha_s3 = 0.1,
       sigma_beta_s3  = 0.01
     )
-    
+
     specific_sigmas <- c(
       "sigma_alpha_s1", "sigma_beta_s1",
       "sigma_alpha_s2", "sigma_beta_s2",
@@ -287,10 +287,10 @@ run_MCMC_allcode <- function(
       "alpha_s1", "beta_s1",
       "alpha_s2", "beta_s2",
       "alpha_s3", "beta_s3"
-    )                     
-    
+    )
+
   } else stop("BYM or nested model names only")
-  
+
   constants <- c(
     list(
       N            = nrow(mortdata),
@@ -298,12 +298,12 @@ run_MCMC_allcode <- function(
       N_age_groups = max(mortdata$age_group.id),
       N_space      = max(mortdata$hier3.id),
       age          = mortdata$age_group.id,
-      space        = mortdata$hier3.id, 
+      space        = mortdata$hier3.id,
       yr           = mortdata$YEAR.id
-    ), 
+    ),
     specific_constants
   )
-  
+
   inits <- c(
     list(
       alpha0          = init_vals$global.intercept,
@@ -315,33 +315,33 @@ run_MCMC_allcode <- function(
       sigma_xi        = init_vals$sigma_xi,
       sigma_gamma     = init_vals$sigma_gamma,
       r               = init_vals$r
-    ), 
+    ),
     specific_inits
   )
-  
+
   data <- list(
     y = mortdata$deaths,
     n = mortdata$population
   )
-  
+
   # ----- CREATE THE MODEL IN R -----
   model <- nimbleModel(
-    code      = code, 
+    code      = code,
     constants = constants,
-    inits     = inits, 
+    inits     = inits,
     data      = data,
     calculate = FALSE
   )
   print("----- MODEL BUILT -----")
-  
+
   # ----- COMPILE THE MODEL IN C -----
   Cmodel <- compileNimble(model)
   print("----- MODEL COMPILED -----")
-  
+
   # ----- MCMC INTEGRATION -----
   # Monitor the death rate per person to avoid 0 population issues
   monitors <- c("lograte")
-  
+
   # Hyperparameter monitors to check covergence, with some thinning
   sigmas <- c(
     "sigma_alpha_age", "sigma_beta_age",
@@ -349,43 +349,43 @@ run_MCMC_allcode <- function(
     specific_sigmas
   )
   monitors2 <- c(
-    "r", "alpha0", "beta0", "alpha_age", "beta_age", "xi", 
+    "r", "alpha0", "beta0", "alpha_age", "beta_age", "xi",
     specific_monitors2, sigmas
   )
-  
+
   # CUSTOMISABLE MCMC -- configureMCMC, buildMCMC, compileNimble, runMCMC
   # 1. MCMC Configuration -- can be customised with different samplers
   mcmcConf <- configureMCMC(
     model     = Cmodel,
-    monitors  = monitors, 
+    monitors  = monitors,
     monitors2 = monitors2,
-    thin      = thin_1, 
-    thin2     = thin_2, 
+    thin      = thin_1,
+    thin2     = thin_2,
     print     = TRUE
   )
-  
+
   # sample standard deviations on log scale
   mcmcConf$removeSamplers(sigmas)
   for (s in sigmas) {
     mcmcConf$addSampler(target = s, type = "RW", control = list(log = TRUE))
   }
   print("----- MCMC CONFIGURED -----")
-  
+
   # 2. Build and compile the MCMC
   Rmcmc <- buildMCMC(mcmcConf) # Set enableWAIC = TRUE if we need to calculate WAIC
   print("----- MCMC BUILT -----")
   Cmcmc <- compileNimble(Rmcmc)
   print("----- MCMC COMPILED -----")
-  
+
   # 3. Run MCMC
   # Return samples only
   mcmc.out <- runMCMC(
     Cmcmc,
-    niter       = n_iter, 
-    nburnin     = n_burn, 
+    niter       = n_iter,
+    nburnin     = n_burn,
     #nchains = 1, summary = TRUE,
-    progressBar = TRUE, 
+    progressBar = TRUE,
     setSeed     = seed)
-  
+
   return(mcmc.out)
 }

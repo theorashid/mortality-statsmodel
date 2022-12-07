@@ -60,7 +60,7 @@ saveRDS(
 if (region == "MSOA") {
   sub <- mortality %>% filter(GOR2011 == "E12000007")
   inits_sub <- list(
-    intercept, 
+    intercept,
     slope,
     space_int_inits[unique(sub$MSOA.id)],
     space_slope_inits[unique(sub$MSOA.id)],
@@ -81,11 +81,10 @@ names(inits_sub) <- c(
   "global.intercept", "global.slope", "space.intercepts",
   "space.slopes", "age.intercepts"
 )
-                      
+
 saveRDS(
   inits_sub,
   file = here::here(
     "Data", "Inits", paste0(region, sex, "_T", "_inits.rds")
   )
 )
-

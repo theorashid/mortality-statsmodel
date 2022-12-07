@@ -3,7 +3,7 @@
 Usage:
     run_model.R <region> <model> <sex> <num_iter> <num_burn> [--num_chains=<num_chains>] [--thin_mort=<thin_mort>] [--thin_param=<thin_param>] [--test]
     run_model.R (-h | --help)
-    
+
 Options:
     -h --help                       Show this help message and exit.
     --test                          Run the smaller test dataset (London for MSOA, Hammersmith and Fulham for LSOA).
@@ -83,8 +83,8 @@ initial$sigma_gamma     <- 0.1
 # reduced adjacency matrix information for BYM
 model_inputs <- prep_model(
   data_path = here::here("Data"),
-  mortality = mortality, 
-  region    = args$region, 
+  mortality = mortality,
+  region    = args$region,
   model     = args$model
 )
 

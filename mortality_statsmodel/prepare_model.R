@@ -20,7 +20,7 @@ load_data <- function(data_path, region, sex, test = FALSE) {
       print(paste0("LOADED LONDON DATA AT ", region, " LEVEL with DIMENSIONS "))
       print(dim(mortality))
     }
-    mortality <- mortality %>% 
+    mortality <- mortality %>%
       filter(sex == !!sex) %>%
       select(-sex) %>%
       arrange(MSOA2011, YEAR, age_group)
@@ -80,7 +80,7 @@ prep_model <- function(data_path, mortality, region, model) {
       sf <- sf %>% left_join(mortality %>% select(LSOA2011, hier3.id) %>% distinct())
     } else stop("invalid region: MSOA or LSOA only")
 
-    sf <- sf %>% 
+    sf <- sf %>%
       filter(!is.na(hier3.id)) %>%  # remove NA rows for subsetting
       arrange(hier3.id) # reorder on hier3
 
@@ -162,19 +162,19 @@ prep_model <- function(data_path, mortality, region, model) {
   } else if (model == "nested") {
     # lookup correct hier2 or hier3 for that hier1
     # grid.lookup[j, 2] for hier2, grid.lookup[j, 3] for hier1
-    grid.lookup <- mortality %>% 
+    grid.lookup <- mortality %>%
       select(hier3.id, hier2.id, hier1.id) %>%
       distinct() %>%
       arrange(hier3.id) # arrange ascending so matches loop order
-     
+
     grid.lookup.s2 <- mortality %>%
       select(hier2.id, hier1.id) %>%
       distinct() %>%
       arrange(hier2.id)
-     
+
     grid.lookup    <- as.matrix(grid.lookup)
     grid.lookup.s2 <- as.matrix(grid.lookup.s2)
     print("----- LOOKUPS MADE -----")
     return(list(grid.lookup, grid.lookup.s2))
   } else stop("invalid model name: BYM or nested only")
-} 
+}
