@@ -6,17 +6,15 @@ suppressPackageStartupMessages({
 #' function required to run the mcmc chains in parallel
 #' this will build a separate model on each core
 #' the function body contains the BYM and nested models
-run_MCMC_allcode <- function(
-  seed,
-  model_name,
-  mortdata,
-  init_vals,
-  n_iter,
-  n_burn,
-  thin_1,
-  thin_2,
-  inputs
-) {
+run_MCMC_allcode <- function(seed,
+                             model_name,
+                             mortdata,
+                             init_vals,
+                             n_iter,
+                             n_burn,
+                             thin_1,
+                             thin_2,
+                             inputs) {
   library(nimble)
   library(dplyr)
 
@@ -44,67 +42,67 @@ run_MCMC_allcode <- function(
 
       # COMMON TERMS
       alpha0 ~ dnorm(0, 0.00001)
-      beta0  ~ dnorm(0, 0.00001)
+      beta0 ~ dnorm(0, 0.00001)
 
       # AREA TERMS -- BYM priors
       # No hierarchy
       # Structured intercept and slope with a CAR prior
       alpha_u[1:N_space] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_alpha_u, zero_mean = 1)
-      beta_u[1:N_space]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_beta_u, zero_mean = 1)
+      beta_u[1:N_space] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_beta_u, zero_mean = 1)
       # Unstructured IID intercept and slope
-      for(s in 1:N_space) {
+      for (s in 1:N_space) {
         alpha_v[s] ~ dnorm(alpha_u[s], sd = sigma_alpha_v) # centred on CAR term
-        beta_v[s]  ~ dnorm(beta_u[s], sd = sigma_beta_v)
+        beta_v[s] ~ dnorm(beta_u[s], sd = sigma_beta_v)
       }
-      sigma_alpha_u ~ dunif(0,2)
-      tau_alpha_u <- pow(sigma_alpha_u,-2)
-      sigma_beta_u ~ dunif(0,2)
-      tau_beta_u <- pow(sigma_beta_u,-2)
-      sigma_alpha_v ~ dunif(0,2)
-      sigma_beta_v ~ dunif(0,2)
+      sigma_alpha_u ~ dunif(0, 2)
+      tau_alpha_u <- pow(sigma_alpha_u, -2)
+      sigma_beta_u ~ dunif(0, 2)
+      tau_beta_u <- pow(sigma_beta_u, -2)
+      sigma_alpha_v ~ dunif(0, 2)
+      sigma_beta_v ~ dunif(0, 2)
 
       # AGE TERMS
       alpha_age[1] <- alpha0 # initialise first terms for RW
-      beta_age[1]  <- beta0
-      for(a in 2:N_age_groups) {
-        alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
-        beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
+      beta_age[1] <- beta0
+      for (a in 2:N_age_groups) {
+        alpha_age[a] ~ dnorm(alpha_age[a - 1], sd = sigma_alpha_age) # RW based on previous age group
+        beta_age[a] ~ dnorm(beta_age[a - 1], sd = sigma_beta_age)
       }
-      sigma_alpha_age ~ dunif(0,2)
-      sigma_beta_age ~ dunif(0,2)
+      sigma_alpha_age ~ dunif(0, 2)
+      sigma_beta_age ~ dunif(0, 2)
 
       # INTERACTIONS
       # age-space interactions
-      for(a in 1:N_age_groups) {
-        for(s in 1:N_space) {
+      for (a in 1:N_age_groups) {
+        for (s in 1:N_space) {
           xi[a, s] ~ dnorm(alpha_age[a] + alpha_v[s], sd = sigma_xi) # centred on age + space term
         }
       }
-      sigma_xi ~ dunif(0,2)
+      sigma_xi ~ dunif(0, 2)
 
       # space-time random walk
-      for(s in 1:N_space){
+      for (s in 1:N_space) {
         nu[s, 1] <- 0
-        for(t in 2:N_year) {
-          nu[s, t] ~ dnorm(nu[s, t-1] + beta_v[s], sd = sigma_nu)
+        for (t in 2:N_year) {
+          nu[s, t] ~ dnorm(nu[s, t - 1] + beta_v[s], sd = sigma_nu)
         }
       }
-      sigma_nu ~ dunif(0,2)
+      sigma_nu ~ dunif(0, 2)
 
       # age-time random walk
-      for(a in 1:N_age_groups){
+      for (a in 1:N_age_groups) {
         gamma[a, 1] <- 0
-        for(t in 2:N_year) {
-          gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
+        for (t in 2:N_year) {
+          gamma[a, t] ~ dnorm(gamma[a, t - 1] + beta_age[a], sd = sigma_gamma)
         }
       }
-      sigma_gamma ~ dunif(0,2)
+      sigma_gamma ~ dunif(0, 2)
 
 
       # Put all parameters together into indexed lograte term
-      for(a in 1:N_age_groups) {
-        for(s in 1:N_space) {
-          for(t in 1:N_year) {
+      for (a in 1:N_age_groups) {
+        for (s in 1:N_space) {
+          for (t in 1:N_year) {
             lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
           }
         }
@@ -116,10 +114,10 @@ run_MCMC_allcode <- function(
         # y is number of deaths in that cell
         # mu is predicted number of deaths in that cell
         y[i] ~ dnegbin(p[i], r)
-        p[i] <- r/(r + mu[i])
+        p[i] <- r / (r + mu[i])
         log(mu[i]) <- log(n[i]) + lograte[age[i], space[i], yr[i]]
       }
-      r ~ dunif(0,50)
+      r ~ dunif(0, 50)
     })
 
     specific_constants <- list(
@@ -148,7 +146,6 @@ run_MCMC_allcode <- function(
       "alpha_u", "alpha_v",
       "beta_u", "beta_v"
     )
-
   } else if (model_name == "nested") {
     code <- nimbleCode({
       # Theo AO Rashid -- October 2020
@@ -173,76 +170,77 @@ run_MCMC_allcode <- function(
 
       # COMMON TERMS
       alpha0 ~ dnorm(0, 0.00001)
-      beta0  ~ dnorm(0, 0.00001)
+      beta0 ~ dnorm(0, 0.00001)
 
       # AREA TERMS -- random effects for intercepts and slopes
       # Lower level term centred on higher level
 
       # tier 1 terms
-      for(s1 in 1:N_s1){
+      for (s1 in 1:N_s1) {
         alpha_s1[s1] ~ dnorm(0, sd = sigma_alpha_s1)
         beta_s1[s1] ~ dnorm(0, sd = sigma_beta_s1)
       }
-      sigma_alpha_s1 ~ dunif(0,2)
-      sigma_beta_s1  ~ dunif(0,2)
+      sigma_alpha_s1 ~ dunif(0, 2)
+      sigma_beta_s1 ~ dunif(0, 2)
 
       # tier 2 terms
-      for(s2 in 1:N_s2){
+      for (s2 in 1:N_s2) {
         alpha_s2[s2] ~ dnorm(alpha_s1[grid.lookup.s2[s2, 2]], sd = sigma_alpha_s2) # centred on s1 terms
         beta_s2[s2] ~ dnorm(beta_s1[grid.lookup.s2[s2, 2]], sd = sigma_beta_s2)
       }
-      sigma_alpha_s2 ~ dunif(0,2)
-      sigma_beta_s2  ~ dunif(0,2)
+      sigma_alpha_s2 ~ dunif(0, 2)
+      sigma_beta_s2 ~ dunif(0, 2)
 
       # tier 3 terms
-      for(s in 1:N_space){ # s = s3, N_space = N_s3
+      for (s in 1:N_space) {
+        # s = s3, N_space = N_s3
         alpha_s3[s] ~ dnorm(alpha_s2[grid.lookup[s, 2]], sd = sigma_alpha_s3) # centred on s2 terms
-        beta_s3[s]  ~ dnorm(beta_s2[grid.lookup[s, 2]], sd = sigma_beta_s3)
+        beta_s3[s] ~ dnorm(beta_s2[grid.lookup[s, 2]], sd = sigma_beta_s3)
       }
-      sigma_alpha_s3 ~ dunif(0,2)
-      sigma_beta_s3  ~ dunif(0,2)
+      sigma_alpha_s3 ~ dunif(0, 2)
+      sigma_beta_s3 ~ dunif(0, 2)
 
       # AGE TERMS
       alpha_age[1] <- alpha0 # initialise first terms for RW
-      beta_age[1]  <- beta0
-      for(a in 2:N_age_groups){
-        alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
-        beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
+      beta_age[1] <- beta0
+      for (a in 2:N_age_groups) {
+        alpha_age[a] ~ dnorm(alpha_age[a - 1], sd = sigma_alpha_age) # RW based on previous age group
+        beta_age[a] ~ dnorm(beta_age[a - 1], sd = sigma_beta_age)
       }
-      sigma_alpha_age ~ dunif(0,2)
-      sigma_beta_age ~ dunif(0,2)
+      sigma_alpha_age ~ dunif(0, 2)
+      sigma_beta_age ~ dunif(0, 2)
 
       # INTERACTIONS
       # age-space interactions
-      for(a in 1:N_age_groups) {
-        for(s in 1:N_space) {
+      for (a in 1:N_age_groups) {
+        for (s in 1:N_space) {
           xi[a, s] ~ dnorm(alpha_age[a] + alpha_s3[s], sd = sigma_xi) # centred on age + space term
         }
       }
-      sigma_xi ~ dunif(0,2)
+      sigma_xi ~ dunif(0, 2)
 
       # space-time random walk
-      for(s in 1:N_space){
+      for (s in 1:N_space) {
         nu[s, 1] <- 0
-        for(t in 2:N_year) {
-          nu[s, t] ~ dnorm(nu[s, t-1] + beta_s3[s], sd = sigma_nu)
+        for (t in 2:N_year) {
+          nu[s, t] ~ dnorm(nu[s, t - 1] + beta_s3[s], sd = sigma_nu)
         }
       }
-      sigma_nu ~ dunif(0,2)
+      sigma_nu ~ dunif(0, 2)
 
       # age-time random walk
-      for(a in 1:N_age_groups){
+      for (a in 1:N_age_groups) {
         gamma[a, 1] <- 0
-        for(t in 2:N_year) {
-          gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
+        for (t in 2:N_year) {
+          gamma[a, t] ~ dnorm(gamma[a, t - 1] + beta_age[a], sd = sigma_gamma)
         }
       }
-      sigma_gamma ~ dunif(0,2)
+      sigma_gamma ~ dunif(0, 2)
 
       # Put all parameters together into indexed lograte term
-      for(a in 1:N_age_groups) {
-        for(s in 1:N_space) {
-          for(t in 1:N_year) {
+      for (a in 1:N_age_groups) {
+        for (s in 1:N_space) {
+          for (t in 1:N_year) {
             lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
           }
         }
@@ -254,10 +252,10 @@ run_MCMC_allcode <- function(
         # y is number of deaths in that cell
         # mu is predicted number of deaths in that cell
         y[i] ~ dnegbin(p[i], r)
-        p[i] <- r/(r + mu[i])
+        p[i] <- r / (r + mu[i])
         log(mu[i]) <- log(n[i]) + lograte[age[i], space[i], yr[i]]
       }
-      r ~ dunif(0,50)
+      r ~ dunif(0, 50)
     })
 
     specific_constants <- list(
@@ -288,8 +286,9 @@ run_MCMC_allcode <- function(
       "alpha_s2", "beta_s2",
       "alpha_s3", "beta_s3"
     )
-
-  } else stop("BYM or nested model names only")
+  } else {
+    stop("BYM or nested model names only")
+  }
 
   constants <- c(
     list(
@@ -383,9 +382,10 @@ run_MCMC_allcode <- function(
     Cmcmc,
     niter       = n_iter,
     nburnin     = n_burn,
-    #nchains = 1, summary = TRUE,
+    # nchains = 1, summary = TRUE,
     progressBar = TRUE,
-    setSeed     = seed)
+    setSeed     = seed
+  )
 
   return(mcmc.out)
 }

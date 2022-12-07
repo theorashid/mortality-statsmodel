@@ -7,7 +7,7 @@ suppressPackageStartupMessages({
 #' Function to load the correct dataset based on region (LSOA | MSOA)
 load_data <- function(data_path, region, sex, test = FALSE) {
   if (region == "MSOA") {
-    if(!test) {
+    if (!test) {
       mortality <- read_csv(
         file = paste0(data_path, "/Mortality/", "mortality_eng_ac_", region, ".csv")
       )
@@ -26,14 +26,14 @@ load_data <- function(data_path, region, sex, test = FALSE) {
       arrange(MSOA2011, YEAR, age_group)
     mortality <- mortality %>%
       mutate(
-        GOR.id       = mortality %>% group_by(GOR2011)   %>% group_indices(),
-        LAD.id       = mortality %>% group_by(LAD2020)   %>% group_indices(),
-        MSOA.id      = mortality %>% group_by(MSOA2011)  %>% group_indices(),
+        GOR.id       = mortality %>% group_by(GOR2011) %>% group_indices(),
+        LAD.id       = mortality %>% group_by(LAD2020) %>% group_indices(),
+        MSOA.id      = mortality %>% group_by(MSOA2011) %>% group_indices(),
         age_group.id = mortality %>% group_by(age_group) %>% group_indices(),
-        YEAR.id      = mortality %>% group_by(YEAR)      %>% group_indices()
+        YEAR.id      = mortality %>% group_by(YEAR) %>% group_indices()
       )
   } else if (region == "LSOA") {
-    if(!test) {
+    if (!test) {
       mortality <- read_csv(
         file = paste0(data_path, "/Mortality/", "mortality_ldn_ac_", region, ".csv")
       )
@@ -52,14 +52,16 @@ load_data <- function(data_path, region, sex, test = FALSE) {
       arrange(LSOA2011, YEAR, age_group)
     mortality <- mortality %>%
       mutate(
-        GOR.id       = mortality %>% group_by(GOR2011)   %>% group_indices(),
-        LAD.id       = mortality %>% group_by(LAD2020)   %>% group_indices(),
-        MSOA.id      = mortality %>% group_by(MSOA2011)  %>% group_indices(),
-        LSOA.id      = mortality %>% group_by(LSOA2011)  %>% group_indices(),
+        GOR.id       = mortality %>% group_by(GOR2011) %>% group_indices(),
+        LAD.id       = mortality %>% group_by(LAD2020) %>% group_indices(),
+        MSOA.id      = mortality %>% group_by(MSOA2011) %>% group_indices(),
+        LSOA.id      = mortality %>% group_by(LSOA2011) %>% group_indices(),
         age_group.id = mortality %>% group_by(age_group) %>% group_indices(),
-        YEAR.id      = mortality %>% group_by(YEAR)      %>% group_indices()
+        YEAR.id      = mortality %>% group_by(YEAR) %>% group_indices()
       )
-  } else stop("invalid region: MSOA or LSOA only")
+  } else {
+    stop("invalid region: MSOA or LSOA only")
+  }
   print(paste0("FILTERED MORTALITY DATA ROWS: ", dim(mortality)[1]))
   return(mortality)
 }
@@ -78,10 +80,12 @@ prep_model <- function(data_path, mortality, region, model) {
       sf <- topojson_read(paste0(data_path, "/GIS/", "ldn_", region, "2011_BFC.json"))
       sf <- sf %>% rename(LSOA2011 = LSOA11CD)
       sf <- sf %>% left_join(mortality %>% select(LSOA2011, hier3.id) %>% distinct())
-    } else stop("invalid region: MSOA or LSOA only")
+    } else {
+      stop("invalid region: MSOA or LSOA only")
+    }
 
     sf <- sf %>%
-      filter(!is.na(hier3.id)) %>%  # remove NA rows for subsetting
+      filter(!is.na(hier3.id)) %>% # remove NA rows for subsetting
       arrange(hier3.id) # reorder on hier3
 
     # Extract adjacency matrix
@@ -96,13 +100,17 @@ prep_model <- function(data_path, mortality, region, model) {
       # Hayling Island, E02004776 -- E02004775
       # Scilly Isles, E02006781   -- E02003950
       # Canvey Island, E02004482  -- E02004479
-      islands   <- c("E02003592", "E02004776", "E02006781", "E02004482")
+      islands <- c("E02003592", "E02004776", "E02006781", "E02004482")
       mainlands <- c("E02004801", "E02004775", "E02003950", "E02004479")
 
       for (i in 1:length(islands)) {
         print(islands[i])
-        head   <- sf %>% filter(MSOA2011 == islands[i]) %>% pull(hier3.id)
-        target <- sf %>% filter(MSOA2011 == mainlands[i]) %>% pull(hier3.id)
+        head <- sf %>%
+          filter(MSOA2011 == islands[i]) %>%
+          pull(hier3.id)
+        target <- sf %>%
+          filter(MSOA2011 == mainlands[i]) %>%
+          pull(hier3.id)
 
         # add connection from head to target
         hier3 <- head
@@ -110,29 +118,30 @@ prep_model <- function(data_path, mortality, region, model) {
         if (hier3 == 1) {
           pre_id <- 0
         } else {
-          pre_id <- sum(nbInfo$num[1:(hier3-1)])
+          pre_id <- sum(nbInfo$num[1:(hier3 - 1)])
         }
 
         nn <- nbInfo$num[hier3] # number of neighbours
         if (nn > 0) {
-          id  <- sum(nbInfo$num[1:hier3]) # end position on neighbours list
-          tmp <- nbInfo$adj[(pre_id+1):id] # neighbours list
+          id <- sum(nbInfo$num[1:hier3]) # end position on neighbours list
+          tmp <- nbInfo$adj[(pre_id + 1):id] # neighbours list
 
           # add target to neighbours list
           tmp <- append(tmp, target)
           tmp <- tmp[order(tmp)] # keep them in the right order
           pos <- which(tmp %in% target)
 
-          nbInfo$adj <- append(nbInfo$adj, target, (pre_id+pos-1))
+          nbInfo$adj <- append(nbInfo$adj, target, (pre_id + pos - 1))
           print(nbInfo$adj[(pre_id)])
-          print(nbInfo$adj[(pre_id+pos)])
+          print(nbInfo$adj[(pre_id + pos)])
 
           nbInfo$num[hier3] <- nbInfo$num[hier3] + 1 # added one more neighbour
-          nbInfo$weights    <- append(nbInfo$weights, 1) # weights are all equal
-        } else { # Scilly isles has no neighbours
-          nbInfo$adj        <- append(nbInfo$adj, target, pre_id)
+          nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
+        } else {
+          # Scilly isles has no neighbours
+          nbInfo$adj <- append(nbInfo$adj, target, pre_id)
           nbInfo$num[hier3] <- nbInfo$num[hier3] + 1 # added one more neighbour
-          nbInfo$weights    <- append(nbInfo$weights, 1) # weights are all equal
+          nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
         }
 
         # add connection back from target to head
@@ -141,20 +150,20 @@ prep_model <- function(data_path, mortality, region, model) {
         if (hier3 == 1) {
           pre_id <- 0
         } else {
-          pre_id <- sum(nbInfo$num[1:(hier3-1)])
+          pre_id <- sum(nbInfo$num[1:(hier3 - 1)])
         }
 
-        id  <- sum(nbInfo$num[1:hier3]) # end position on neighbours list
-        tmp <- nbInfo$adj[(pre_id+1):id] # neighbours list
+        id <- sum(nbInfo$num[1:hier3]) # end position on neighbours list
+        tmp <- nbInfo$adj[(pre_id + 1):id] # neighbours list
 
         # add head to neighbours list
         tmp <- append(tmp, head)
         tmp <- tmp[order(tmp)] # keep them in the right order
         pos <- which(tmp %in% head)
 
-        nbInfo$adj        <- append(nbInfo$adj, head, (pre_id+pos-1))
+        nbInfo$adj <- append(nbInfo$adj, head, (pre_id + pos - 1))
         nbInfo$num[hier3] <- nbInfo$num[hier3] + 1 # added one more neighbour
-        nbInfo$weights    <- append(nbInfo$weights, 1) # weights are all equal
+        nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
       }
     }
     print("----- SHAPE DATA LOADED -----")
@@ -172,9 +181,11 @@ prep_model <- function(data_path, mortality, region, model) {
       distinct() %>%
       arrange(hier2.id)
 
-    grid.lookup    <- as.matrix(grid.lookup)
+    grid.lookup <- as.matrix(grid.lookup)
     grid.lookup.s2 <- as.matrix(grid.lookup.s2)
     print("----- LOOKUPS MADE -----")
     return(list(grid.lookup, grid.lookup.s2))
-  } else stop("invalid model name: BYM or nested only")
+  } else {
+    stop("invalid model name: BYM or nested only")
+  }
 }

@@ -12,22 +12,24 @@ library(lme4)
 source(here::here("Models", "parametric", "prepare_model.R"))
 
 region <- "LSOA"
-sex    <- 1
+sex <- 1
 
 mortality <- load_data(data_path, region = region, sex = sex, test = FALSE)
 
 # model with only age intercepts, MSOA/LSOA intercepts and MSOA/LSOA slopes
 if (region == "MSOA") {
   system.time(
-    mod <- glmer(deaths ~ offset(log(population)) + YEAR.id + (1|age_group.id) + (1 + YEAR.id|MSOA.id), family = "poisson", data = subset(mortality, population > 0))
+    mod <- glmer(deaths ~ offset(log(population)) + YEAR.id + (1 | age_group.id) + (1 + YEAR.id | MSOA.id), family = "poisson", data = subset(mortality, population > 0))
   )
   bin <- ranef(mod)$MSOA.id
 } else if (region == "LSOA") {
   system.time(
-    mod <- glmer(deaths ~ offset(log(population)) + YEAR.id + (1|age_group.id) + (1 + YEAR.id|LSOA.id), family = "poisson", data = subset(mortality, population > 0))
+    mod <- glmer(deaths ~ offset(log(population)) + YEAR.id + (1 | age_group.id) + (1 + YEAR.id | LSOA.id), family = "poisson", data = subset(mortality, population > 0))
   )
   bin <- ranef(mod)$LSOA.id
-} else stop("invalid region: MSOA or LSOA only")
+} else {
+  stop("invalid region: MSOA or LSOA only")
+}
 
 fixed <- coef(summary(mod))[, "Estimate"] # fixed effects
 intercept <- fixed[1]
