@@ -5,64 +5,50 @@ suppressPackageStartupMessages({
 })
 
 #' Function to load the correct dataset based on region (LSOA | MSOA)
-load_data <- function(data_path, region, sex, test = FALSE) {
+load_data <- function(data_path, region, sex) {
   if (region == "MSOA") {
-    if (!test) {
-      mortality <- read_csv(
-        file = paste0(data_path, "/Mortality/", "mortality_eng_ac_", region, ".csv")
-      )
-      print(paste0("LOADED ENGLAND DATA AT ", region, " LEVEL with DIMENSIONS "))
-      print(dim(mortality))
-    } else {
-      mortality <- read_csv(
-        file = paste0(data_path, "/Mortality/", "mortality_ldn_ac_", region, ".csv")
-      )
-      print(paste0("LOADED LONDON DATA AT ", region, " LEVEL with DIMENSIONS "))
-      print(dim(mortality))
-    }
-    mortality <- mortality %>%
-      filter(sex == !!sex) %>%
-      select(-sex) %>%
+    mortality <- read_csv(
+      file = str_c(data_path, "mortality_ldn_ac_", region, ".csv")
+    )
+    print(str_c("Loaded England ", region, " data with dimensions "))
+    print(dim(mortality))
+
+    mortality <- mortality |>
+      filter(sex == !!sex) |>
+      select(-sex) |>
       arrange(MSOA2011, YEAR, age_group)
-    mortality <- mortality %>%
+    mortality <- mortality |>
       mutate(
-        GOR.id       = mortality %>% group_by(GOR2011) %>% group_indices(),
-        LAD.id       = mortality %>% group_by(LAD2020) %>% group_indices(),
-        MSOA.id      = mortality %>% group_by(MSOA2011) %>% group_indices(),
-        age_group.id = mortality %>% group_by(age_group) %>% group_indices(),
-        YEAR.id      = mortality %>% group_by(YEAR) %>% group_indices()
+        GOR.id       = mortality |> group_by(GOR2011) |> group_indices(),
+        LAD.id       = mortality |> group_by(LAD2020) |> group_indices(),
+        MSOA.id      = mortality |> group_by(MSOA2011) |> group_indices(),
+        age_group.id = mortality |> group_by(age_group) |> group_indices(),
+        YEAR.id      = mortality |> group_by(YEAR) |> group_indices()
       )
   } else if (region == "LSOA") {
-    if (!test) {
-      mortality <- read_csv(
-        file = paste0(data_path, "/Mortality/", "mortality_ldn_ac_", region, ".csv")
-      )
-      print(paste0("LOADED LONDON DATA AT ", region, " LEVEL with DIMENSIONS "))
-      print(dim(mortality))
-    } else {
-      mortality <- read_csv(
-        file = paste0(data_path, "/Mortality/", "mortality_hf_ac_", region, ".csv")
-      )
-      print(paste0("LOADED HAMMERSMITH AND FULHAM DATA AT ", region, " LEVEL with DIMENSIONS "))
-      print(dim(mortality))
-    }
-    mortality <- mortality %>%
-      filter(sex == !!sex) %>%
-      select(-sex) %>%
+    mortality <- read_csv(
+      file = paste0(data_path, "mortality_ldn_ac_", region, ".csv")
+    )
+    print(str_c("Loaded London ", region, " data with dimensions "))
+    print(dim(mortality))
+
+    mortality <- mortality |>
+      filter(sex == !!sex) |>
+      select(-sex) |>
       arrange(LSOA2011, YEAR, age_group)
-    mortality <- mortality %>%
+    mortality <- mortality |>
       mutate(
-        GOR.id       = mortality %>% group_by(GOR2011) %>% group_indices(),
-        LAD.id       = mortality %>% group_by(LAD2020) %>% group_indices(),
-        MSOA.id      = mortality %>% group_by(MSOA2011) %>% group_indices(),
-        LSOA.id      = mortality %>% group_by(LSOA2011) %>% group_indices(),
-        age_group.id = mortality %>% group_by(age_group) %>% group_indices(),
-        YEAR.id      = mortality %>% group_by(YEAR) %>% group_indices()
+        GOR.id       = mortality |> group_by(GOR2011) |> group_indices(),
+        LAD.id       = mortality |> group_by(LAD2020) |> group_indices(),
+        MSOA.id      = mortality |> group_by(MSOA2011) |> group_indices(),
+        LSOA.id      = mortality |> group_by(LSOA2011) |> group_indices(),
+        age_group.id = mortality |> group_by(age_group) |> group_indices(),
+        YEAR.id      = mortality |> group_by(YEAR) |> group_indices()
       )
   } else {
     stop("invalid region: MSOA or LSOA only")
   }
-  print(paste0("FILTERED MORTALITY DATA ROWS: ", dim(mortality)[1]))
+  print(str_c("Filtered mortality data rows: ", dim(mortality)[1]))
   return(mortality)
 }
 
@@ -73,23 +59,23 @@ prep_model <- function(data_path, mortality, region, model) {
   if (model == "BYM") {
     # Shape data for extent (not clipped) and merge with mortality
     if (region == "MSOA") {
-      sf <- topojson_read(paste0(data_path, "/GIS/", "EW_", region, "2011_BFC.json"))
-      sf <- sf %>% rename(MSOA2011 = MSOA11CD)
-      sf <- sf %>% left_join(mortality %>% select(MSOA2011, hier3.id) %>% distinct())
+      sf <- topojson_read(str_c(data_path, "EW_", region, "2011_BFC.json"))
+      sf <- sf |> rename(MSOA2011 = MSOA11CD)
+      sf <- sf |> left_join(mortality |> select(MSOA2011, hier3.id) |> distinct())
     } else if (region == "LSOA") {
-      sf <- topojson_read(paste0(data_path, "/GIS/", "ldn_", region, "2011_BFC.json"))
-      sf <- sf %>% rename(LSOA2011 = LSOA11CD)
-      sf <- sf %>% left_join(mortality %>% select(LSOA2011, hier3.id) %>% distinct())
+      sf <- topojson_read(paste0(data_path, "ldn_", region, "2011_BFC.json"))
+      sf <- sf |> rename(LSOA2011 = LSOA11CD)
+      sf <- sf |> left_join(mortality |> select(LSOA2011, hier3.id) |> distinct())
     } else {
       stop("invalid region: MSOA or LSOA only")
     }
 
-    sf <- sf %>%
-      filter(!is.na(hier3.id)) %>% # remove NA rows for subsetting
+    sf <- sf |>
+      filter(!is.na(hier3.id)) |> # remove NA rows for subsetting
       arrange(hier3.id) # reorder on hier3
 
     # Extract adjacency matrix
-    W.nb <- poly2nb(sf, row.names = sf %>% pull(hier3.id))
+    W.nb <- poly2nb(sf, row.names = sf |> pull(hier3.id))
     nbInfo <- nb2WB(W.nb)
     # adj = nbInfo$adj, weights = nbInfo$weights, num = nbInfo$num
 
@@ -105,11 +91,11 @@ prep_model <- function(data_path, mortality, region, model) {
 
       for (i in 1:length(islands)) {
         print(islands[i])
-        head <- sf %>%
-          filter(MSOA2011 == islands[i]) %>%
+        head <- sf |>
+          filter(MSOA2011 == islands[i]) |>
           pull(hier3.id)
-        target <- sf %>%
-          filter(MSOA2011 == mainlands[i]) %>%
+        target <- sf |>
+          filter(MSOA2011 == mainlands[i]) |>
           pull(hier3.id)
 
         # add connection from head to target
@@ -171,14 +157,14 @@ prep_model <- function(data_path, mortality, region, model) {
   } else if (model == "nested") {
     # lookup correct hier2 or hier3 for that hier1
     # grid.lookup[j, 2] for hier2, grid.lookup[j, 3] for hier1
-    grid.lookup <- mortality %>%
-      select(hier3.id, hier2.id, hier1.id) %>%
-      distinct() %>%
+    grid.lookup <- mortality |>
+      select(hier3.id, hier2.id, hier1.id) |>
+      distinct() |>
       arrange(hier3.id) # arrange ascending so matches loop order
 
-    grid.lookup.s2 <- mortality %>%
-      select(hier2.id, hier1.id) %>%
-      distinct() %>%
+    grid.lookup.s2 <- mortality |>
+      select(hier2.id, hier1.id) |>
+      distinct() |>
       arrange(hier2.id)
 
     grid.lookup <- as.matrix(grid.lookup)

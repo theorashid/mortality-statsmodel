@@ -6,15 +6,16 @@
 # and age intercepts
 # --------------------
 
-library(dplyr)
+library(here)
+library(tidyverse)
 library(lme4)
 
-source(here::here("Models", "parametric", "prepare_model.R"))
+source(here("Models", "parametric", "prepare_model.R"))
 
 region <- "LSOA"
 sex <- 1
 
-mortality <- load_data(data_path, region = region, sex = sex, test = FALSE)
+mortality <- load_data(data_path, region = region, sex = sex)
 
 # model with only age intercepts, MSOA/LSOA intercepts and MSOA/LSOA slopes
 if (region == "MSOA") {
@@ -87,6 +88,6 @@ names(inits_sub) <- c(
 saveRDS(
   inits_sub,
   file = here::here(
-    "Data", "Inits", paste0(region, sex, "_T", "_inits.rds")
+    "Data", "Inits", paste0(region, sex, "_inits.rds")
   )
 )
