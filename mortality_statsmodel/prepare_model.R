@@ -52,9 +52,9 @@ load_data <- function(data_path, region, sex) {
   return(mortality)
 }
 
-#'  Prepare inputs for:
-#'  - BYM model by matching shapedata to mortality data, output is reduced adjacency matrix
-#'  - nested model by producing lookup tables linking hier1 to hier2 and hier3 geographies
+#' Prepare inputs for:
+#' - BYM model by matching shapedata to mortality data, output is reduced adjacency matrix
+#' - nested model by producing lookup tables linking hier1 to hier2 and hier3 geographies
 prep_model <- function(data_path, mortality, region, model) {
   if (model == "BYM") {
     # Shape data for extent (not clipped) and merge with mortality
@@ -152,7 +152,7 @@ prep_model <- function(data_path, mortality, region, model) {
         nbInfo$weights <- append(nbInfo$weights, 1) # weights are all equal
       }
     }
-    print("----- SHAPE DATA LOADED -----")
+    print("Shape data loaded")
     return(nbInfo)
   } else if (model == "nested") {
     # lookup correct hier2 or hier3 for that hier1
@@ -169,7 +169,7 @@ prep_model <- function(data_path, mortality, region, model) {
 
     grid.lookup <- as.matrix(grid.lookup)
     grid.lookup.s2 <- as.matrix(grid.lookup.s2)
-    print("----- LOOKUPS MADE -----")
+    print("Lookups made")
     return(list(grid.lookup, grid.lookup.s2))
   } else {
     stop("invalid model name: BYM or nested only")

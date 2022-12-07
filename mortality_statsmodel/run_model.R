@@ -1,12 +1,11 @@
 "Run mortality model.
 
 Usage:
-    run_model.R <region> <model> <sex> <num_iter> <num_burn> [--num_chains=<num_chains>] [--thin_mort=<thin_mort>] [--thin_param=<thin_param>] [--test]
+    run_model.R <region> <model> <sex> <num_iter> <num_burn> [--num_chains=<num_chains>] [--thin_mort=<thin_mort>] [--thin_param=<thin_param>]
     run_model.R (-h | --help)
 
 Options:
     -h --help                       Show this help message and exit.
-    --test                          Run the smaller test dataset (London for MSOA, Hammersmith and Fulham for LSOA).
     --num_chains=<num_chains>       Number of parallel chains [default: 1].
     --thin_mort=<thin_mort>         Thinning interval for mortality rates [default: 10].
     --thin_param=<thin_param>       Thinning interval for model parameters (must be greater than thin_mort) [default: 100].
@@ -21,23 +20,22 @@ Arguments:
 
 args <- docopt::docopt(doc)
 
-source(here::here("Models", "parametric", "prepare_model.R"))
-source(here::here("Models", "parametric", "nimble_model.R"))
+source(here::here("mortality_statsmodel", "prepare_model.R"))
+source(here::here("mortality_statsmodel", "nimble_model.R"))
 
 # test parameters for running interactively
-# args <- list("LSOA", "BYM", "1", TRUE, "100", "10", "1", "2", "10")
+# args <- list("LSOA", "BYM", "1", "100", "10", "1", "2", "10")
 # names(args) <- list(
-#   "region", "model", "sex", "test",
+#   "region", "model", "sex",
 #   "num_iter", "num_burn", "num_chains",
 #   "thin_mort", "thin_param"
 # )
 
 # ----- IMPORT MORTALITY DATA -----
 mortality <- load_data(
-  data_path = here::here("Data"),
+  data_path = here::here("data"),
   region    = args$region,
   sex       = as.numeric(args$sex),
-  test      = args$test
 )
 
 # add ID columns, hier3 as lowest level of hierarchy
@@ -58,19 +56,11 @@ if (args$region == "MSOA") {
 }
 
 # ----- IMPORT INITIAL VALUES -----
-if (!args$test) {
-  initial <- readRDS(
-    file = here::here(
-      "Data", "Inits", paste0(args$region, args$sex, "_inits.rds")
-    )
+initial <- readRDS(
+  file = here::here(
+    "data", paste0(args$region, args$sex, "_inits.rds")
   )
-} else {
-  initial <- readRDS(
-    file = here::here(
-      "Data", "Inits", paste0(args$region, args$sex, "_T", "_inits.rds")
-    )
-  )
-}
+)
 
 initial$r <- 10.0
 initial$sigma_alpha_age <- 0.6
@@ -82,7 +72,7 @@ initial$sigma_gamma <- 0.1
 # ----- RUN MODEL PREPROCESSING ------
 # reduced adjacency matrix information for BYM
 model_inputs <- prep_model(
-  data_path = here::here("Data"),
+  data_path = here::here("data"),
   mortality = mortality,
   region    = args$region,
   model     = args$model
@@ -130,20 +120,9 @@ if (as.numeric(args$num_chains) == 1) {
 }
 
 print("----- SAVING DATA... -----")
-if (!args$test) {
-  saveRDS(
-    chain_output,
-    file = here::here(
-      "Output", "mcmc_output",
-      paste0(args$region, args$model, args$sex, "_mcmc_out.rds")
-    )
+saveRDS(
+  chain_output,
+  file = here::here(
+    paste0(args$region, args$model, args$sex, "_mcmc_out.rds")
   )
-} else {
-  saveRDS(
-    chain_output,
-    file = here::here(
-      "Output", "mcmc_output",
-      paste0(args$region, args$model, args$sex, "_T", "_mcmc_out.rds")
-    )
-  )
-}
+)
