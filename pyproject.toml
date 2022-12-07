@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "mortality-statsmodel"
+version = "0.1.0"
+description = "Spatiotemporal small-area mortality models"
+authors = ["theorashid <theoaorashid@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "mortality_statsmodel"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpyro = "^0.10.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.10.0"
+flake8 = "^6.0.0"
+isort = "^5.10.1"
+pre-commit = "^2.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
