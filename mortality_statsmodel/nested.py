@@ -186,7 +186,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    assert numpyro.__version__.startswith("0.10.0")
+    assert numpyro.__version__.startswith("0.10.1")
 
     parser = argparse.ArgumentParser(description="Mortality regression model")
     parser.add_argument("--region", default="LSOA", type=str, help='"LSOA" or "MSOA".')
