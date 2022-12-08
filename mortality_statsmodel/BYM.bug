@@ -36,58 +36,58 @@ alpha_u[1:N_space] ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_alp
 beta_u[1:N_space]  ~ dcar_normal(adj[1:L], weights[1:L], num[1:N_space], tau_beta_u, zero_mean = 1)
 # Unstructured IID intercept and slope
 for(s in 1:N_space) {
-  alpha_v[s] ~ dnorm(alpha_u[s], sd = sigma_alpha_v) # centred on CAR term
-  beta_v[s]  ~ dnorm(beta_u[s], sd = sigma_beta_v)
+	alpha_v[s] ~ dnorm(alpha_u[s], sd = sigma_alpha_v) # centred on CAR term
+	beta_v[s]  ~ dnorm(beta_u[s], sd = sigma_beta_v)
 }
 
 # AGE TERMS
 alpha_age[1] <- alpha0 # initialise first terms for RW
 beta_age[1]  <- beta0
 for(a in 2:N_age_groups) {
-  alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
-  beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
+	alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
+	beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
 }
 
 # INTERACTIONS
 # age-space interactions
 for(a in 1:N_age_groups) {
-  for(s in 1:N_space) {
-    xi[a, s] ~ dnorm(alpha_age[a] + alpha_v[s], sd = sigma_xi) # centred on age + space term
-  }
+	for(s in 1:N_space) {
+		xi[a, s] ~ dnorm(alpha_age[a] + alpha_v[s], sd = sigma_xi) # centred on age + space term
+	}
 }
 
 # space-time random walk
 for(s in 1:N_space){
-  nu[s, 1] <- 0
-  for(t in 2:N_year) {
-    nu[s, t] ~ dnorm(nu[s, t-1] + beta_v[s], sd = sigma_nu)
-  }
+	nu[s, 1] <- 0
+	for(t in 2:N_year) {
+		nu[s, t] ~ dnorm(nu[s, t-1] + beta_v[s], sd = sigma_nu)
+	}
 }
 
 # age-time random walk
 for(a in 1:N_age_groups){
-  gamma[a, 1] <- 0
-  for(t in 2:N_year) {
-    gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
-  }
+	gamma[a, 1] <- 0
+	for(t in 2:N_year) {
+		gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
+	}
 }
 
 # Put all parameters together into indexed lograte term
 for(a in 1:N_age_groups) {
-  for(s in 1:N_space) {
-    for(t in 1:N_year) {
-      lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
-    }
-  }
+	for(s in 1:N_space) {
+		for(t in 1:N_year) {
+			lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
+		}
+	}
 }
 
 # LIKELIHOOD
 # N total number of cells, i.e. ages*years*areas(*sex)
 for (i in 1:N) {
-  # y is number of deaths in that cell
-  # mu is predicted number of deaths in that cell
-  y[i] ~ dnegbin(p[i], r)
-  p[i] <- r/(r + mu[i])
-  log(mu[i]) <- log(n[i]) + lograte[age[i], space[i], yr[i]]
+	# y is number of deaths in that cell
+	# mu is predicted number of deaths in that cell
+	y[i] ~ dnegbin(p[i], r)
+	p[i] <- r/(r + mu[i])
+	log(mu[i]) <- log(n[i]) + lograte[age[i], space[i], yr[i]]
 }
 }

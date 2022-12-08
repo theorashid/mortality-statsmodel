@@ -1,21 +1,21 @@
 "Run mortality model.
 
 Usage:
-    run_model.R <region> <model> <sex> <num_iter> <num_burn> [--num_chains=<num_chains>] [--thin_mort=<thin_mort>] [--thin_param=<thin_param>]
-    run_model.R (-h | --help)
+		run_model.R <region> <model> <sex> <num_iter> <num_burn> [--num_chains=<num_chains>] [--thin_mort=<thin_mort>] [--thin_param=<thin_param>]
+		run_model.R (-h | --help)
 
 Options:
-    -h --help                       Show this help message and exit.
-    --num_chains=<num_chains>       Number of parallel chains [default: 1].
-    --thin_mort=<thin_mort>         Thinning interval for mortality rates [default: 10].
-    --thin_param=<thin_param>       Thinning interval for model parameters (must be greater than thin_mort) [default: 100].
+		-h --help                       Show this help message and exit.
+		--num_chains=<num_chains>       Number of parallel chains [default: 1].
+		--thin_mort=<thin_mort>         Thinning interval for mortality rates [default: 10].
+		--thin_param=<thin_param>       Thinning interval for model parameters (must be greater than thin_mort) [default: 100].
 
 Arguments:
-    <region>        Spatial unit of interest (MSOA | LSOA).
-    <model>         Name of the model (BYM | nested ).
-    <sex>           Sex of the run (1 for male, 2 for female).
-    <num_iter>      Number of iterations for the MCMC.
-    <num_burn>      Number of burn in iterations for the MCMC.
+		<region>        Spatial unit of interest (MSOA | LSOA).
+		<model>         Name of the model (BYM | nested ).
+		<sex>           Sex of the run (1 for male, 2 for female).
+		<num_iter>      Number of iterations for the MCMC.
+		<num_burn>      Number of burn in iterations for the MCMC.
 " -> doc
 
 args <- docopt::docopt(doc)

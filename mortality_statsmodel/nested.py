@@ -30,8 +30,8 @@ def load_data(data_dir="", region="LSOA", sex="male"):
 def create_lookup(s1, s2, s3):
     """
     Create map between:
-        - s1 indices and unique s2 indices
-        - s2 indices and unique s3 indices
+            - s1 indices and unique s2 indices
+            - s2 indices and unique s3 indices
     """
     lookup12 = np.column_stack([s1, s2])
     lookup12 = np.unique(lookup12, axis=0)
