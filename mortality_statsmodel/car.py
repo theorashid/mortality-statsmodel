@@ -159,7 +159,6 @@ if __name__ == "__main__":
     assert numpyro.__version__.startswith("0.10.1")
 
     parser = argparse.ArgumentParser(description="Mortality regression model")
-    parser.add_argument("--cause", default="2_All_other_cancers", type=str)
     parser.add_argument("--region", default="LAD", type=str, help="LAD.")
     parser.add_argument("--sex", default="male", type=str, help='"male" or "female".')
     parser.add_argument("-n", "--num-samples", nargs="?", default=500, type=int)
