@@ -8,8 +8,6 @@ This code is used in:
 
 ## nimble models
 
-$$ a + b $$
-
 The models here are fitted using [nimble](https://r-nimble.org). For ease of reading and to aid the user more familiar with other MCMC software, I've also added the basic model structure as BUGS code.
 
 These are a collection of Bayesian hierarchical models in `Models/parametric`. Deaths are modelled using a negative binomial likelihood. We are looking at the death rate per person in a given spatial unit, year and age group stratum. It is the _death rate per person_ that varies between models. The following model designs are used:
@@ -31,6 +29,21 @@ Rscript run_model.R --help
 ```
 
 ## numpyro models (experimental)
+
+Models in numpyro, massive speedups, particularly if run on GPU as these are large models.
+
+Link to example contributed. ICAR using CAR distribution with correlation parameter set to 0.99
+
+```sh
+poetry run python car.py MSOA nested 1 10000 5000 --num_chains=4
+```
+
+## Table of models
+
+file | paper | likelihood | terms | spatial effects
+------| ----- | ----- | ---------- | --------------
+nested.bug | Rashid 2021 | gamma-Poisson | $a + b$ | nested
+
 
 ## Data availability
 

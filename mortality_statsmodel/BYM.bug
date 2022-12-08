@@ -3,7 +3,7 @@ model{
 # Theo AO Rashid -- October 2020
 
 # ----- BYM model -----
-# Negative binomial likelihood
+# Gamma-Poisson likelihood
 #
 # Global terms (normal prior) +
 # BYM for each space +

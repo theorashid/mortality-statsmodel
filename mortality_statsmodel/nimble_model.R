@@ -29,7 +29,7 @@ run_MCMC_allcode <- function(seed,
 
     # ----- Nested model -----
     # Three tier nested hierarchy
-    # Negative binomial likelihood
+    # Gamma-Poisson likelihood
     #
     # Global terms (normal prior) +
     # Random effects for tier 1 (normal prior) +
