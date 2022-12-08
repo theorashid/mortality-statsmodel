@@ -1,0 +1,107 @@
+
+model{
+# Theo AO Rashid -- December 2021
+
+# ----- Nested model -----
+# Three tier nested hierarchy
+# beta-binomial likelihood
+#
+# Global terms (normal prior) +
+# Random effects for tier 1 (normal prior) +
+# Random effects for tier 2 (normal prior, hierarchy) +
+# Random effects for tier 3 (smallest) (normal prior, hierarchy) +
+# Age effects (random walk prior) +
+# Age-space interaction (normal prior) +
+# Age random walk +
+# Space random walk
+#
+# Designed for the ONS hierarchy LSOA -> MSOA -> LAD / MSOA -> LAD -> Region (3 -> 2 -> 1)
+# --------------------
+
+# PRIORS
+alpha0 ~ dnorm(0, 0.00001)
+beta0  ~ dnorm(0, 0.00001)
+sigma_alpha_s1 ~ T(dnorm(0, 1), 0, Inf)
+sigma_beta_s1  ~ T(dnorm(0, 1), 0, Inf)
+sigma_alpha_s2 ~ T(dnorm(0, 1), 0, Inf)
+sigma_beta_s2  ~ T(dnorm(0, 1), 0, Inf)
+sigma_alpha_s3 ~ T(dnorm(0, 1), 0, Inf)
+sigma_beta_s3  ~ T(dnorm(0, 1), 0, Inf)
+sigma_alpha_age ~ T(dnorm(0, 1), 0, Inf)
+sigma_beta_age ~ T(dnorm(0, 1), 0, Inf)
+sigma_xi ~ T(dnorm(0, 1), 0, Inf)
+sigma_nu ~ T(dnorm(0, 1), 0, Inf)
+sigma_gamma ~ T(dnorm(0, 1), 0, Inf)
+theta ~ dexp(rate = 0.1)
+
+# AREA TERMS -- random effects for intercepts and slopes
+# Lower level term centred on higher level
+# tier 1 terms
+for(s1 in 1:N_s1){
+	alpha_s1[s1] ~ dnorm(0, sd = sigma_alpha_s1)
+	beta_s1[s1] ~ dnorm(0, sd = sigma_beta_s1)
+}
+
+# tier 2 terms
+for(s2 in 1:N_s2){
+	alpha_s2[s2] ~ dnorm(alpha_s1[grid.lookup.s2[s2, 2]], sd = sigma_alpha_s2) # centred on s1 terms
+	beta_s2[s2] ~ dnorm(beta_s1[grid.lookup.s2[s2, 2]], sd = sigma_beta_s2)
+}
+
+# tier 3 terms
+for(s in 1:N_space){ # s = s3, N_space = N_s3
+	alpha_s3[s] ~ dnorm(alpha_s2[grid.lookup[s, 2]], sd = sigma_alpha_s3) # centred on s2 terms
+	beta_s3[s]  ~ dnorm(beta_s2[grid.lookup[s, 2]], sd = sigma_beta_s3)
+}
+
+# AGE TERMS
+alpha_age[1] <- alpha0 # initialise first terms for RW
+beta_age[1]  <- beta0
+for(a in 2:N_age_groups){
+	alpha_age[a] ~ dnorm(alpha_age[a-1], sd = sigma_alpha_age) # RW based on previous age group
+	beta_age[a]  ~ dnorm(beta_age[a-1], sd = sigma_beta_age)
+}
+
+# INTERACTIONS
+# age-space interactions
+for(a in 1:N_age_groups) {
+	for(s in 1:N_space) {
+		xi[a, s] ~ dnorm(alpha_age[a] + alpha_s3[s], sd = sigma_xi) # centred on age + space term
+	}
+}
+
+# space-time random walk
+for(s in 1:N_space){
+	nu[s, 1] <- 0
+	for(t in 2:N_year) {
+		nu[s, t] ~ dnorm(nu[s, t-1] + beta_s3[s], sd = sigma_nu)
+	}
+}
+
+# age-time random walk
+for(a in 1:N_age_groups){
+	gamma[a, 1] <- 0
+	for(t in 2:N_year) {
+		gamma[a, t] ~ dnorm(gamma[a, t-1] + beta_age[a], sd = sigma_gamma)
+	}
+}
+
+# Put all parameters together into indexed lograte term
+for(a in 1:N_age_groups) {
+	for(s in 1:N_space) {
+		for(t in 1:N_year) {
+			lograte[a, s, t] <- xi[a, s] + nu[s, t] + gamma[a, t]
+		}
+	}
+}
+
+# LIKELIHOOD
+# N total number of cells, i.e. ages*years*areas(*sex)
+for (i in 1:N) {
+	# y is number of deaths in that cell
+	# mu is predicted number of deaths in that cell
+	# custom beta-binomial likelihood available on request
+	y[i] ~ dbetabin(mu[i] * theta, (1 - mu[i]) * theta, n[i])
+	logit(mu[i]) <- lograte[age[i], space[i], yr[i]]
+}
+}
