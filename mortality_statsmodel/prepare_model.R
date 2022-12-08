@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 load_data <- function(data_path, region, sex) {
   if (region == "MSOA") {
     mortality <- read_csv(
-      file = str_c(data_path, "mortality_ldn_ac_", region, ".csv")
+      file = str_c(data_path, "/mortality_ldn_ac_", region, ".csv")
     )
     print(str_c("Loaded England ", region, " data with dimensions "))
     print(dim(mortality))
@@ -27,7 +27,7 @@ load_data <- function(data_path, region, sex) {
       )
   } else if (region == "LSOA") {
     mortality <- read_csv(
-      file = paste0(data_path, "mortality_ldn_ac_", region, ".csv")
+      file = str_c(data_path, "/mortality_ldn_ac_", region, ".csv")
     )
     print(str_c("Loaded London ", region, " data with dimensions "))
     print(dim(mortality))
