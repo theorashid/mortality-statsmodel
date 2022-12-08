@@ -40,10 +40,13 @@ poetry run python car.py MSOA nested 1 10000 5000 --num_chains=4
 
 ## Table of models
 
-file | paper | likelihood | terms | spatial effects
-------| ----- | ----- | ---------- | --------------
-nested.bug | Rashid 2021 | gamma-Poisson | $a + b$ | nested
-
+file       | paper       | likelihood    | terms                                                                    | spatial effects
+---------- | ----------- | ------------- | ------------------------------------------------------------------------------- | -------
+nested.bug | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | nested
+BYM.bug    | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | BYM
+nested_bb.bug | -        | beta-binomial | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | nested
+nested.py     | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | nested
+car.py        | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | ICAR
 
 ## Data availability
 
