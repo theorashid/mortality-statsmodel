@@ -35,7 +35,7 @@ source(here::here("mortality_statsmodel", "nimble_model.R"))
 mortality <- load_data(
   data_path = here::here("data"),
   region    = args$region,
-  sex       = as.numeric(args$sex),
+  sex       = as.numeric(args$sex)
 )
 
 # add ID columns, hier3 as lowest level of hierarchy
