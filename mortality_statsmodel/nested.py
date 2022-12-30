@@ -4,7 +4,6 @@ Three-tier mortality model with beta-binomial likelihood.
 """
 
 import argparse
-import os
 import pickle
 
 import jax.numpy as jnp
