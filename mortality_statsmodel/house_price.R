@@ -14,4 +14,19 @@ library(lme4)
 # tau_2,beds :- Beds linear time slope; studio, 1-, 2-, 3-, 4- and 5-bedrooms, 6/7/8-bedrooms
 # omega_D,beds :- Beds intercepts, district offsets
 
-house_price_model <- lmer(Lprice ~ (1 + quart | oa_id) + (1 + quart | lsoa_id) + (1 + quart | msoa_id) + (1 + quart | lad_id) + q1 + (1 | q1_lad_id) + Type + FreeL + nBedrooms + NewOld + Season + Type:quart + nBedrooms:quart + (1 | nBedrooms_lad_id), data = dat)
+house_price_model <- lmer(
+  Lprice ~ (1 + quart | oa_id) +
+    (1 + quart | lsoa_id) +
+    (1 + quart | msoa_id) +
+    (1 + quart | lad_id) + q1 +
+    (1 | q1_lad_id) +
+    Type +
+    FreeL +
+    nBedrooms +
+    NewOld +
+    Season +
+    Type:quart +
+    nBedrooms:quart +
+    (1 | nBedrooms_lad_id),
+  data = dat
+)
