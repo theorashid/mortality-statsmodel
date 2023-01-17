@@ -55,7 +55,7 @@ car.py        | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+
 ## House price model
 
 This repo also includes the linear mixed effects model for estimating house prices, implemented in `house_price.R`.
-The model has effects for space, time, housing type, ownership type, new or old, season, number of bedrooms.
+The model has effects for space, time, housing type, ownership type, new or old, season, and number of bedrooms.
 See Appendix Table 5 of Bennett 2023 for more information.
 
 ## Data availability
