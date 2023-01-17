@@ -7,7 +7,17 @@ This code is used in:
 - Rashid, T., Bennett, J.E. et al. (2021). [Life expectancy and risk of death in 6791 communities in England from 2002 to 2019: high-resolution spatiotemporal analysis of civil registration data](https://www.thelancet.com/journals/lanpub/article/PIIS2468-2667(21)00205-X/fulltext). _The Lancet Public Health_.
 - Bennett, J.E., Rashid, T. et al. (2023). Changes in life expectancy and house prices in London from 2002 to 2019: hyper-resolution spatiotemporal analysis of death registration and real estate data
 
-## nimble models
+## Table of models
+
+file       | paper       | likelihood    | terms                                                                    | spatial effects
+---------- | ----------- | ------------- | ------------------------------------------------------------------------------- | -------
+nested.bug | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | nested
+BYM.bug    | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | BYM
+nested_bb.bug | Bennett 2023 | beta-binomial | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | nested
+nested.py     | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | nested
+car.py        | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | ICAR
+
+### nimble models
 
 The models are fitted using [nimble](https://r-nimble.org).
 For ease of reading and to aid the user more familiar with other MCMC software, I've also added the model structure as BUGS code.
@@ -30,7 +40,7 @@ For the full explanation of the options available, run
 Rscript run_model.R --help
 ```
 
-## numpyro models (experimental)
+### numpyro models (experimental)
 
 By porting the model to [numpyro](https://num.pyro.ai/), I have seen massive speedups, both in terms of run time and effective samples per second.
 This is thanks to numpyro's jax backend allowing sampling on a GPU, which is beneficial for large models, and using NUTS over nimble's conjugate Gibbs/RWMH samplers.
@@ -42,17 +52,7 @@ The `car.py` model uses the ICAR distribution for spatial effects by setting the
 poetry run python car.py --region="MSOA" --sex=1 --num_samples=10000 --num_warmup=5000 --num_chains=4 --device="cpu"
 ```
 
-## Table of models
-
-file       | paper       | likelihood    | terms                                                                    | spatial effects
----------- | ----------- | ------------- | ------------------------------------------------------------------------------- | -------
-nested.bug | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | nested
-BYM.bug    | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | BYM
-nested_bb.bug | Bennett 2023 | beta-binomial | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | nested
-nested.py     | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | nested
-car.py        | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | ICAR
-
-## House price model
+### House price model
 
 This repo also includes the linear mixed effects model for estimating house prices, implemented in `house_price.R`.
 The model has effects for space, time, housing type, ownership type, new or old, season, and number of bedrooms.
