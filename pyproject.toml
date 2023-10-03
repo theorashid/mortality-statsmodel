@@ -8,8 +8,9 @@ readme = "README.md"
 packages = [{include = "mortality_statsmodel"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.13"
 numpyro = "^0.10.1"
+scipy = "^1.11.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.10.0"
