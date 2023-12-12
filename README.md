@@ -6,6 +6,7 @@ This code is used in:
 
 - Rashid, T., Bennett, J.E. et al. (2021). [Life expectancy and risk of death in 6791 communities in England from 2002 to 2019: high-resolution spatiotemporal analysis of civil registration data](https://www.thelancet.com/journals/lanpub/article/PIIS2468-2667(21)00205-X/fulltext). _The Lancet Public Health_.
 - Bennett, J.E., Rashid, T. et al. (2023). [Changes in life expectancy and house prices in London from 2002 to 2019: hyper-resolution spatiotemporal analysis of death registration and real estate data](https://www.thelancet.com/journals/lanepe/article/PIIS2666-7762(22)00276-9/fulltext). _The Lancet Regional Health Europe_.
+- Rashid, T., Bennett, J.E. et al. (2023). [Mortality from leading cancers in districts of England from 2002 to 2019: a population-based, spatiotemporal study](https://www.thelancet.com/journals/lanonc/article/PIIS1470-2045(23)00530-2/fulltext). _The Lancet Oncology_.
 
 ## Table of models
 
@@ -15,7 +16,7 @@ nested.bug | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+
 BYM.bug    | Rashid 2021 | gamma-Poisson | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | BYM
 nested_bb.bug | Bennett 2023 | beta-binomial | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at} + ν_{st}$ | nested
 nested.py     | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | nested
-car.py        | -        | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | ICAR
+car.py        | Rashid 2023 | binomial      | $α_0 + β_0 t + α_{1s} + β_{1s} t+ α_{2a} + β_{2a} t + ξ_{as} + γ_{at}$          | ICAR
 
 ### nimble models
 
@@ -40,7 +41,7 @@ For the full explanation of the options available, run
 Rscript run_model.R --help
 ```
 
-### numpyro models (experimental)
+### numpyro models
 
 By porting the model to [numpyro](https://num.pyro.ai/), I have seen massive speedups, both in terms of run time and effective samples per second.
 This is thanks to numpyro's jax backend allowing sampling on a GPU, which is beneficial for large models, and using NUTS over nimble's conjugate Gibbs/RWMH samplers.
