@@ -8,6 +8,8 @@ This code is used in:
 - Bennett, J.E., Rashid, T. et al. (2023). [Changes in life expectancy and house prices in London from 2002 to 2019: hyper-resolution spatiotemporal analysis of death registration and real estate data](https://www.thelancet.com/journals/lanepe/article/PIIS2666-7762(22)00276-9/fulltext). _The Lancet Regional Health Europe_.
 - Rashid, T., Bennett, J.E. et al. (2023). [Mortality from leading cancers in districts of England from 2002 to 2019: a population-based, spatiotemporal study](https://www.thelancet.com/journals/lanonc/article/PIIS1470-2045(23)00530-2/fulltext). _The Lancet Oncology_.
 
+_This project has been developed further in [sparklabnyc/bayesian-envhealth-models](https://github.com/sparklabnyc/bayesian-envhealth-models)_.
+
 ## Table of models
 
 file       | paper       | likelihood    | terms                                                                    | spatial effects
